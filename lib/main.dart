@@ -7,6 +7,7 @@ import 'package:escala_mobile/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -27,16 +28,19 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final prefs = await SharedPreferences.getInstance();
   int currentCount = prefs.getInt('notificationCount') ?? 0;
   await prefs.setInt('notificationCount', currentCount + 1);
-  print("🔔 Contador em background atualizado: ${currentCount + 1}");
+  print(" Contador em background atualizado: ${currentCount + 1}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   await initializeDateFormatting('pt_BR', null);
-  await NotificationService.init();
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // Inicialização condicional do Firebase e Notificações
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    await NotificationService.init();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
 
   final userModel = UserModel();
   bool isLoggedIn = await userModel.loadUserFromToken();
@@ -62,7 +66,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _setupFirebaseMessaging();
+    if (!kIsWeb) {
+      _setupFirebaseMessaging();
+    }
   }
 
   void _setupFirebaseMessaging() async {

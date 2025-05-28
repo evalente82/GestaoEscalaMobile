@@ -1,0 +1,18 @@
+workflows:
+  ios-simulator-workflow:
+    name: iOS Simulator Build
+    instance_type: mac_mini_m1
+    environment:
+      xcode: latest
+      flutter: stable
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter pub get
+          flutter clean
+      - name: Build for iOS Simulator
+        script: |
+          flutter build ios --debug --no-codesign --simulator
+    artifacts:
+      - build/ios/iphonesimulator/*.app
+      - flutter_drive.log

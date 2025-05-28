@@ -448,70 +448,67 @@ class _PermutaScreenState extends State<PermutaScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
             Text("Permutas Solicitadas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
             _permutasSolicitadas.isNotEmpty
-                ? SizedBox(
-                    width: MediaQuery.of(context).size.width - 32,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: DataTable(
-                        columnSpacing: 6,
-                        columns: const [
-                          DataColumn(label: Text("Solicitante", style: TextStyle(fontSize: 12))),
-                          DataColumn(label: Text("Solicitado", style: TextStyle(fontSize: 12))),
-                          DataColumn(label: Text("Aceito", style: TextStyle(fontSize: 12))),
-                          DataColumn(label: Text("Data", style: TextStyle(fontSize: 12))),
-                          DataColumn(label: Text("Autorizado", style: TextStyle(fontSize: 12))),
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columnSpacing: 20,
+                      horizontalMargin: 15,
+                      columns: const [
+                        DataColumn(label: Text("Solicitante", style: TextStyle(fontSize: 12))),
+                        DataColumn(label: Text("Solicitado", style: TextStyle(fontSize: 12))),
+                        DataColumn(label: Text("Aceito", style: TextStyle(fontSize: 12))),
+                        DataColumn(label: Text("Data", style: TextStyle(fontSize: 12))),
+                        DataColumn(label: Text("Autorizado", style: TextStyle(fontSize: 12))),
+                      ],
+                      rows: _permutasSolicitadas.map((p) => DataRow(
+                        cells: [
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: 120),
+                              child: Text(p["solicitante"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: 120),
+                              child: Text(p["solicitado"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          DataCell(
+                            Container(
+                              alignment: Alignment.center,
+                              child: p["nmStatus"] == "RecusadaSolicitado"
+                                  ? Icon(Icons.close, color: Colors.red, size: 20)
+                                  : Checkbox(
+                                      value: p["nmStatus"] != null && (p["nmStatus"] == "AprovadaSolicitado" || p["nmStatus"] == "Aprovada"),
+                                      onChanged: null,
+                                    ),
+                            ),
+                          ),
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: 70),
+                              child: Text(p["dataSolicitadaTroca"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          DataCell(
+                            Container(
+                              alignment: Alignment.center,
+                              child: p["nmStatus"] == "Recusada"
+                                  ? Icon(Icons.close, color: Colors.red, size: 20)
+                                  : Checkbox(
+                                      value: p["nmStatus"] != null && (p["nmStatus"] == "Aprovada"),
+                                      onChanged: null,
+                                    ),
+                            ),
+                          ),
                         ],
-                        rows: _permutasSolicitadas.map((p) {
-                          return DataRow(cells: [
-                            DataCell(
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 80),
-                                child: Text(p["solicitante"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
-                              ),
-                            ),
-                            DataCell(
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 80),
-                                child: Text(p["solicitado"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
-                              ),
-                            ),
-                            DataCell(
-                              Container(
-                                alignment: Alignment.center,
-                                child: p["nmStatus"] == "RecusadaSolicitado"
-                                    ? Icon(Icons.close, color: Colors.red, size: 20)
-                                    : Checkbox(
-                                        value: p["nmStatus"] != null && (p["nmStatus"] == "AprovadaSolicitado" || p["nmStatus"] == "Aprovada"),
-                                        onChanged: null,
-                                      ),
-                              ),
-                            ),
-                            DataCell(
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 70),
-                                child: Text(p["dataSolicitadaTroca"] ?? "", style: TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis),
-                              ),
-                            ),
-                            DataCell(
-                              Container(
-                                alignment: Alignment.center,
-                                child: p["nmStatus"] == "Recusada"
-                                    ? Icon(Icons.close, color: Colors.red, size: 20)
-                                    : Checkbox(
-                                        value: p["nmStatus"] != null && (p["nmStatus"] == "Aprovada"),
-                                        onChanged: null,
-                                      ),
-                              ),
-                            ),
-                          ]);
-                        }).toList(),
-                      ),
+                      )).toList(),
                     ),
                   )
                 : const SizedBox.shrink(),

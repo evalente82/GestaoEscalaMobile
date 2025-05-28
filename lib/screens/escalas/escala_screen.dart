@@ -197,57 +197,113 @@ class _EscalaScreenState extends State<EscalaScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: DropdownButtonFormField<String>(
-              value: _idEscalaSelecionada,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Container(
+              width: double.infinity,
+              child: DropdownButtonFormField<String>(
+                isExpanded: true,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                value: _idEscalaSelecionada,
+                items: _escalas.map((escala) {
+                  return DropdownMenuItem<String>(
+                    value: escala["id"],
+                    child: Text(
+                      escala["nome"],
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _idEscalaSelecionada = value;
+                      _filtrarPostosPorEscala(value);
+                    });
+                  }
+                },
+                hint: const Text(
+                  "Selecione uma escala",
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
+                ),
               ),
-              items: _escalas.map((escala) {
-                return DropdownMenuItem<String>(
-                  value: escala["id"],
-                  child: Text(escala["nome"]),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _idEscalaSelecionada = value;
-                    _filtrarPostosPorEscala(value);
-                  });
-                }
-              },
-              hint: const Text("Selecione uma escala"),
             ),
           ),
           if (_escalaPronta.isNotEmpty) ...[
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DataTable(
-                      columns: [const DataColumn(label: Text("Dia"))],
-                      rows: escalaAgrupada.keys.map((dia) => DataRow(cells: [DataCell(Text(dia))])).toList(),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: _postosFiltrados.isNotEmpty
-                              ? _postosFiltrados.map((posto) => DataColumn(label: Text(posto))).toList()
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: RawScrollbar(
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  child: SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Coluna fixa de dias
+                          DataTable(
+                            headingRowHeight: 40,
+                            dataRowHeight: 60,
+                            columnSpacing: 20,
+                            headingTextStyle: const TextStyle(fontWeight: FontWeight.bold),
+                            columns: [const DataColumn(label: Text("Dia"))],
+                            rows: escalaAgrupada.keys.map((dia) => DataRow(
+                              cells: [DataCell(Text(dia))],
+                            )).toList(),
+                          ),
+                          // Colunas dos postos
+                          DataTable(
+                            headingRowHeight: 40,
+                            dataRowHeight: 60,
+                            columnSpacing: 20,
+                            headingTextStyle: const TextStyle(fontWeight: FontWeight.bold),
+                            columns: _postosFiltrados.isNotEmpty
+                              ? _postosFiltrados.map((posto) => DataColumn(
+                                  label: Container(
+                                    constraints: const BoxConstraints(maxWidth: 150),
+                                    child: Text(
+                                      posto,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )).toList()
                               : [],
-                          rows: escalaAgrupada.keys.map((dia) => DataRow(
-                            cells: _postosFiltrados.map((posto) {
-                              List<String> funcionarios = escalaAgrupada[dia]?[posto] ?? ["-"];
-                              return DataCell(Column(children: funcionarios.map((func) => Text(func)).toList()));
-                            }).toList(),
-                          )).toList(),
-                        ),
+                            rows: escalaAgrupada.keys.map((dia) => DataRow(
+                              cells: _postosFiltrados.map((posto) {
+                                List<String> funcionarios = escalaAgrupada[dia]?[posto] ?? ["-"];
+                                return DataCell(
+                                  Container(
+                                    constraints: const BoxConstraints(maxWidth: 150),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: funcionarios.map((func) => Text(
+                                        func,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      )).toList(),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            )).toList(),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

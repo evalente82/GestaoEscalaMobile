@@ -1,9 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart'; // Adicione esta linha
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiClient {
-  static const String baseUrl = "http://192.168.0.4:7207";
+  static String get baseUrl {
+    if (kIsWeb) {
+      return "";
+      // return "http://localhost:7207";
+    }
+    return "https://back-gestao-escala.fly.dev";
+    // return "http://192.168.0.8:7207";
+  }
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

@@ -1,10 +1,17 @@
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
-  static const String baseUrl = "http://192.168.0.9:7207";
+  static String get baseUrl {
+    if (kIsWeb) {
+      return "";
+      // return "http://localhost:7207";
+    }
+    return "https://back-gestao-escala.fly.dev";
+    // return "http://10.0.2.2:7207";
+  }
 
   static Future<Map<String, dynamic>> login(String usuario, String senha) async {
     try {
