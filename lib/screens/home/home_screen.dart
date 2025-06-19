@@ -1,5 +1,6 @@
 
 import 'package:escala_mobile/models/user_model.dart';
+import 'package:escala_mobile/screens/EscalaExtra/escala_extra.dart';
 import 'package:escala_mobile/screens/escalas/escala_screen.dart';
 import 'package:escala_mobile/screens/login/login_screen.dart';
 import 'package:escala_mobile/screens/permutas/permuta_screen.dart';
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
           Container(
             color: Colors.grey[200],
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -125,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
                     child: Column(
                       children: [
+                        const SizedBox(height: 20), // ADICIONADO ESTE ESPAÇO ENTRE OS BOTÕES
                         ElevatedButton(
                           onPressed: () {
                             Navigator.push(
@@ -202,6 +204,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                           ],
+                        ),
+                        const SizedBox(height: 20), // ADICIONADO ESTE ESPAÇO ENTRE OS BOTÕES
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EscalaExtraScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(MediaQuery.of(context).size.width * 0.9, 60),
+                            backgroundColor: const Color(0xFF003580),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            "RAS / Extra",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ],
                     ),

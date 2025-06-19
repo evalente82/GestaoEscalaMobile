@@ -6,11 +6,11 @@ import 'package:flutter/foundation.dart';
 class AuthService {
   static String get baseUrl {
     if (kIsWeb) {
-      return "";
-      // return "http://localhost:7207";
+      //return "";
+      return "http://localhost:8080";
     }
-    return "https://back-gestao-escala.fly.dev";
-    // return "http://10.0.2.2:7207";
+    //return "https://back-gestao-escala.fly.dev";
+     return "http://10.0.2.2:8080";
   }
 
   static Future<Map<String, dynamic>> login(String usuario, String senha) async {

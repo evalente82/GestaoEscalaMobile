@@ -6,11 +6,11 @@ import 'package:flutter/foundation.dart';
 class ApiClient {
   static String get baseUrl {
     if (kIsWeb) {
-      return "";
-      // return "http://localhost:7207";
+      //return "";
+       return "http://localhost:8080";
     }
-    return "https://back-gestao-escala.fly.dev";
-    // return "http://192.168.0.8:7207";
+    //return "https://back-gestao-escala.fly.dev";
+     return "http://192.168.0.8:8080";
   }
 
   static Future<String?> _getToken() async {
