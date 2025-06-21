@@ -5,6 +5,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
 
 class EscalaExtraScreen extends StatefulWidget {
   const EscalaExtraScreen({super.key});
@@ -79,7 +80,14 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         List<dynamic> data = response["body"];
         setState(() {
           _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-          //print("✅_extrasDisponiveis: $_extrasDisponiveis");
+          // --- MUDANÇA AQUI ---
+        // Cria um codificador JSON com indentação de 2 espaços
+        JsonEncoder encoder = const JsonEncoder.withIndent('  ');
+        // Converte a lista de mapas para uma string JSON formatada
+        String formattedJson = encoder.convert(_extrasDisponiveis);
+
+        print("✅_extrasDisponiveis: $formattedJson");
+        // --- FIM DA MUDANÇA ---
         });
       } else {
         throw Exception("Erro ${response["statusCode"]}");
@@ -112,8 +120,22 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
   }
 
   void _processarDadosExtrasParaCards() {
-    List<Map<String, dynamic>> tempCardsData = [];
-    for (var extra in _extrasDisponiveis) {
+  List<Map<String, dynamic>> tempCardsData = [];
+  for (var extra in _extrasDisponiveis) {
+    // --- MUDANÇA AQUI: Adiciona a verificação para 'isAtivo' ---
+    // A propriedade isAtivo pode vir como bool, ou como 0/1 se for de um banco de dados
+    // Vamos garantir que só processamos se for explicitamente true
+    bool isAtivo = false;
+    if (extra.containsKey("isAtivo")) {
+      if (extra["isAtivo"] is bool) {
+        isAtivo = extra["isAtivo"];
+      } else if (extra["isAtivo"] is int) {
+        isAtivo = extra["isAtivo"] == 1;
+      }
+      // Outros tipos podem ser adicionados se necessário, como String 'true'/'false'
+    }
+
+    if (isAtivo) { // Somente adiciona se 'isAtivo' for true
       // Encontra o setor correspondente
       final setor = _setores.firstWhere(
         (s) => s["idSetor"] == extra["idSetor"],
@@ -136,17 +158,18 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         ...extra, // Para passar todos os dados originais se necessário
       });
     }
-     // ⭐ NOVIDADE: Ordenar os cards pela quantidade de vagas (maior primeiro)
-    tempCardsData.sort((a, b) {
-      // Converte para int para comparação segura, com fallback para 0
-      int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
-      int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
-      return vagasB.compareTo(vagasA); // Para ordenar do maior para o menor
-    });
-    setState(() {
-      _escalasExtrasParaCards = tempCardsData;
-    });
   }
+  // ⭐ NOVIDADE: Ordenar os cards pela quantidade de vagas (maior primeiro)
+  tempCardsData.sort((a, b) {
+    // Converte para int para comparação segura, com fallback para 0
+    int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
+    int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
+    return vagasB.compareTo(vagasA); // Para ordenar do maior para o menor
+  });
+  setState(() {
+    _escalasExtrasParaCards = tempCardsData;
+  });
+}
 
   DateTime ajustarFusoHorario(DateTime dt) {
     // Como estamos no Brasil e a hora da API é Z (UTC), subtrair 3 horas é o correto para Brasília/Rio (GMT-3)
