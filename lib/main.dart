@@ -1,3 +1,6 @@
+
+import 'dart:io';
+
 import 'package:escala_mobile/models/user_model.dart';
 import 'package:escala_mobile/screens/home/home_screen.dart';
 import 'package:escala_mobile/screens/login/login_screen.dart';
@@ -7,24 +10,36 @@ import 'package:escala_mobile/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; 
+// Importe kIsWeb daqui
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// --- Imports essenciais para webview_flutter (APENAS PARA MOBILE) ---
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+// ignore: unused_import
+import 'package:webview_flutter/webview_flutter.dart'; // Principal
+
+// Os imports abaixo não são mais necessários para a solução do reCAPTCHA v2 na web.
+// Remova-os:
+// import 'package:webview_flutter_web/webview_flutter_web.dart';
+// import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+// import 'dart:ui_web' as ui_web;
+
+
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("📩 Notificação em background recebida: ${message.notification?.title}");
 
-  // Exibir notificação local
   await NotificationService.showNotification(
     message.notification?.title ?? "Nova Permuta",
     message.notification?.body ?? "Você recebeu uma nova solicitação de permuta.",
     0,
   );
 
-  // Incrementar contador no SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   int currentCount = prefs.getInt('notificationCount') ?? 0;
   await prefs.setInt('notificationCount', currentCount + 1);
@@ -35,7 +50,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
 
-  // Inicialização condicional do Firebase e Notificações
+  // --- INÍCIO: CORREÇÃO DA INICIALIZAÇÃO DO WEBVIEW_FLUTTER PARA MOBILE ---
+  // Apenas registramos as implementações mobile aqui.
+  // A parte web do webview_flutter NÃO é mais usada para o reCAPTCHA.
+  if (!kIsWeb) {
+    if (Platform.isAndroid) {
+      AndroidWebViewPlatform.registerWith();
+    } else if (Platform.isIOS) {
+      WebKitWebViewPlatform.registerWith();
+    }
+  }
+  // --- FIM: CORREÇÃO DA INICIALIZAÇÃO DO WEBVIEW_FLUTTER PARA MOBILE ---
+
+
+  // Inicialização condicional do Firebase e Notificações (já estava OK)
   if (!kIsWeb) {
     await Firebase.initializeApp();
     await NotificationService.init();
@@ -75,7 +103,6 @@ class _MyAppState extends State<MyApp> {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     await messaging.requestPermission();
 
-    // Carregar contador inicial do SharedPreferences
     final userModel = Provider.of<UserModel>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     int initialCount = prefs.getInt('notificationCount') ?? 0;
@@ -83,7 +110,6 @@ class _MyAppState extends State<MyApp> {
       userModel.setInitialNotificationCount(initialCount);
     }
 
-    // Notificações em foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("📩 Notificação em foreground recebida: ${message.notification?.title}");
       userModel.incrementNotificationCount();
@@ -94,41 +120,38 @@ class _MyAppState extends State<MyApp> {
       );
     });
 
-    // Quando o app é aberto a partir de uma notificação
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print("📩 App aberto por notificação: ${message.notification?.title}");
       userModel.incrementNotificationCount();
       Navigator.pushNamed(context, '/permutas');
     });
 
-    // Enviar FCM Token ao backend
     String? fcmToken = await messaging.getToken();
     if (fcmToken != null) {
       print("🔑 FCM Token: $fcmToken");
       await _sendFcmTokenToBackend(fcmToken);
     }
 
-    // Atualizar FCM Token se ele mudar
     messaging.onTokenRefresh.listen((newToken) {
       print("🔑 FCM Token atualizado: $newToken");
       _sendFcmTokenToBackend(newToken);
     });
   }
 
-Future<void> _sendFcmTokenToBackend(String fcmToken) async {
+  Future<void> _sendFcmTokenToBackend(String fcmToken) async {
     final userModel = Provider.of<UserModel>(context, listen: false);
     if (userModel.idFuncionario.isNotEmpty) {
-        try {
-            final response = await ApiClient.post(
-                "/login/updateFcmToken",
-                {"idFuncionario": userModel.idFuncionario, "fcmToken": fcmToken},
-            );
-            print("✅ FCM Token enviado: ${response["statusCode"]} - ${response["body"]}");
-        } catch (e) {
-            print("❌ Erro ao enviar FCM Token: $e");
-        }
+      try {
+        final response = await ApiClient.post(
+          "/login/updateFcmToken",
+          {"idFuncionario": userModel.idFuncionario, "fcmToken": fcmToken},
+        );
+        print("✅ FCM Token enviado: ${response["statusCode"]} - ${response["body"]}");
+      } catch (e) {
+        print("❌ Erro ao enviar FCM Token: $e");
+      }
     }
-}
+  }
 
   @override
   Widget build(BuildContext context) {
