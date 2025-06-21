@@ -4,12 +4,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-// Removidos os imports específicos para WebView:
-// import 'package:webview_flutter/webview_flutter.dart';
-// import 'dart:io' show Platform;
-// import 'package:webview_flutter_android/webview_flutter_android.dart';
-// import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:flutter/services.dart';
 
 // Import para JS interop (apenas para web) - permanece inalterado
 import 'dart:js' as js;
@@ -26,19 +21,17 @@ class CadastroEscalaExtraScreen extends StatefulWidget {
 
 class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
   // Sua chave do site reCAPTCHA Enterprise (pública)
-  // Permanece inalterada, pois é a chave v3/Enterprise
   final String _recaptchaSiteKey = '6Lf4vGcrAAAAAME7ZtDCeQmErDJlbTNMPLK7AxdZ';
   String? _recaptchaToken;
-  // Removido: WebViewController? _webViewController;
+
+  // Novo: Controlador para o campo de matrícula
+  final TextEditingController _matriculaController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     debugPrint("[Flutter] initState: Inicializando...");
 
-    // Removida toda a lógica de inicialização da WebView para mobile (reCAPTCHA v2)
-    // Agora, o initState apenas informa que a web está pronta para JS Interop,
-    // e o mobile não terá reCAPTCHA por enquanto.
     if (kIsWeb) {
       debugPrint("[Flutter] Ambiente Web: reCAPTCHA v3/Enterprise será gerenciado por JS Interop.");
     } else {
@@ -46,15 +39,21 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
     }
   }
 
+  // Novo: Liberar o controlador quando o widget for descartado
+  @override
+  void dispose() {
+    _matriculaController.dispose();
+    super.dispose();
+  }
+
   // Método para obter o token do reCAPTCHA
   Future<void> _getRecaptchaToken() async {
     debugPrint("[Flutter] _getRecaptchaToken: Iniciado.");
 
     if (kIsWeb) {
-      // Lógica para Web (reCAPTCHA v3/Enterprise via JS interop) - Permanece inalterada
       debugPrint("[Flutter Web] _getRecaptchaToken: Executando reCAPTCHA v3 via JS Interop.");
 
-      String? tempToken; // Variável temporária para armazenar o token
+      String? tempToken;
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -82,10 +81,10 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
                         debugPrint("[Flutter Web] PostFrameCallback: Expondo 'onRecaptchaV3VerifiedWeb' para JS.");
                         js.context['onRecaptchaV3VerifiedWeb'] = (String token) {
                           debugPrint("[Flutter Web] Callback 'onRecaptchaV3VerifiedWeb' acionada pelo JS com token: $token");
-                          tempToken = token; // Armazena o token na variável temporária
+                          tempToken = token;
 
                           if (mounted && Navigator.canPop(dialogContext)) {
-                            Navigator.pop(dialogContext); // Fecha o dialog de carregamento
+                            Navigator.pop(dialogContext);
                           } else {
                             debugPrint("[Flutter Web] Widget não montado ou dialog não pode ser fechado no momento do callback.");
                           }
@@ -111,28 +110,21 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
                   },
                 ),
               ),
-              // Não há botão de cancelar no AlertDialog para o reCAPTCHA v3 pois ele é automático
             ),
           );
         },
       );
-      // Após o showDialog fechar (quando o token for retornado pelo JS callback),
-      // o tempToken estará preenchido.
       setState(() {
           _recaptchaToken = tempToken;
       });
       debugPrint("[Flutter Web] _getRecaptchaToken: reCAPTCHA v3 concluído. Token: $_recaptchaToken");
     } else {
-      // Nova lógica para Mobile: Sem reCAPTCHA por enquanto, ou um aviso.
       debugPrint("[Flutter Mobile] _getRecaptchaToken: reCAPTCHA não implementado para mobile.");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("A verificação de segurança não está disponível para mobile no momento.")),
         );
       }
-      // O token para mobile será nulo, e o _cadastrarFuncionario irá parar.
-      // Você pode definir um valor padrão ou uma flag para pular a verificação de reCAPTCHA no mobile
-      // se a validação for opcional para essa plataforma. Por enquanto, irá falhar.
     }
     debugPrint("[Flutter] _getRecaptchaToken: Finalizado.");
   }
@@ -141,31 +133,37 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
   void _cadastrarFuncionario() async {
     debugPrint("[Flutter] _cadastrarFuncionario: Iniciado.");
 
-    // Se o token ainda for nulo ou inválido, chama o método para obtê-lo.
-    // Removida a verificação 'cancelled' pois não há mais botão de cancelar no dialog mobile v2.
+    // Validação básica do campo de matrícula (opcional, mas recomendado)
+    if (_matriculaController.text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Por favor, digite sua matrícula.")),
+        );
+      }
+      return;
+    }
+
     if (_recaptchaToken == null || _recaptchaToken!.isEmpty ||
         _recaptchaToken == 'expired' || _recaptchaToken == 'error' ||
         _recaptchaToken == 'error_api_not_loaded' || _recaptchaToken == 'error_container_not_found' ||
         _recaptchaToken == 'error_render_exception' || _recaptchaToken == 'error_execution_failed')
     {
       debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA nulo/inválido, chamando _getRecaptchaToken.");
-      _recaptchaToken = null; // Garante que um novo token será buscado
-      await _getRecaptchaToken(); // Obtém o token do reCAPTCHA
+      _recaptchaToken = null;
+      await _getRecaptchaToken();
 
-      // Após a tentativa de obter o token, verifica novamente.
       if (_recaptchaToken == null || _recaptchaToken!.isEmpty ||
           _recaptchaToken == 'expired' || _recaptchaToken == 'error' ||
           _recaptchaToken == 'error_api_not_loaded' || _recaptchaToken == 'error_container_not_found' ||
           _recaptchaToken == 'error_render_exception' || _recaptchaToken == 'error_execution_failed')
       {
         debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA ainda nulo/inválido após tentativa. Interrompendo cadastro.");
-        // Removida a verificação 'cancelled' aqui também.
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Falha na verificação de segurança. Tente novamente.")),
           );
         }
-        return; // Interrompe o processo se o token não for válido.
+        return;
       }
     }
 
@@ -184,15 +182,13 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
     final Map<String, dynamic> requestBody = {
       "idCriacaoEscalaExtra": widget.escalaExtra["idCriacaoEscalaExtra"],
       "idFuncionario": userModel.idFuncionario,
-      "recaptchaToken": _recaptchaToken, // Envia o token do reCAPTCHA para o backend
+      "recaptchaToken": _recaptchaToken,
+      "matricula": _matriculaController.text, // Adiciona o valor da matrícula ao request
     };
 
     debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA antes de enviar: $_recaptchaToken");
 
-    // Limpa o token após o uso para que uma nova validação seja necessária para o próximo cadastro
     _recaptchaToken = null;
-    // Esta linha já foi comentada, mas reforçando: não é necessária para v3
-    // js.context.callMethod('resetRecaptchaV3');
 
     try {
       debugPrint("📡 Enviando solicitação de cadastro de RAS/Extra: $requestBody");
@@ -208,12 +204,20 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("RAS / Extra Cadastrado com sucesso! Confira seu e-mail.")),
           );
-          Navigator.pop(context); // Volta para a tela anterior
+          Navigator.pop(context);
           debugPrint("[Flutter] Cadastro bem-sucedido.");
         } else {
+          // ⭐ NOVIDADE AQUI: Extrai a mensagem da chave 'mensagem' do body
           String errorMessage = "Erro ao Cadastrar RAS / Extra.";
-          if (response['body'] != null && response['body'] is Map && response['body'].containsKey('message')) {
-            errorMessage = response['body']['message'];
+          if (response['body'] != null && response['body'] is Map) {
+            // Se o corpo for um mapa e contiver a chave 'mensagem'
+            if (response['body'].containsKey('mensagem') && response['body']['mensagem'] is String) {
+              errorMessage = response['body']['mensagem'];
+            }
+            // Se não for 'mensagem', mas contiver 'message' (alguns retornos de erro usam 'message')
+            else if (response['body'].containsKey('message') && response['body']['message'] is String) {
+              errorMessage = response['body']['message'];
+            }
           }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage)),
@@ -281,7 +285,25 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
+              // Novo campo de input para a matrícula
+              TextFormField(
+                    controller: _matriculaController,
+                    decoration: InputDecoration(
+                      labelText: "Matrícula",
+                      hintText: "Digite sua matrícula",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      prefixIcon: const Icon(Icons.badge),
+                    ),
+                    // ⭐ NOVIDADE 1: Define o tipo de teclado como numérico
+                    keyboardType: TextInputType.number,
+                    // ⭐ NOVIDADE 2: Usa um formatador para aceitar apenas dígitos
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                  ),
+                  const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

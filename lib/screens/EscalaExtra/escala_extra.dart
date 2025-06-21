@@ -1,3 +1,4 @@
+
 import 'package:escala_mobile/models/user_model.dart';
 import 'package:escala_mobile/screens/EscalaExtra/cadastro_escala_extra.dart';
 import 'package:escala_mobile/services/ApiClient.dart';
@@ -37,7 +38,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
       _buscarSolicitacoesExtras(), // Busque as solicitações APÓS os setores estarem disponíveis
     ]);
     _processarDadosExtrasParaCards(); // Processa os cards após extras e setores
-    
+
     setState(() {
       _isLoading = false;
     });
@@ -78,6 +79,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         List<dynamic> data = response["body"];
         setState(() {
           _extrasDisponiveis = data.cast<Map<String, dynamic>>();
+          //print("✅_extrasDisponiveis: $_extrasDisponiveis");
         });
       } else {
         throw Exception("Erro ${response["statusCode"]}");
@@ -128,11 +130,19 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         "titulo": extra["nmEscalaExtra"] ?? "Sem nome",
         "setorNome": setor["nmNome"], // Nome do setor
         "setorDescricao": setor["nmDescricao"], // Descrição do setor
+        "vagas": extra["qtdVagas"] ?? 0, // Garante que 'vagas' seja um número, com fallback para 0
         "data": DateFormat("dd-MM-yyyy").format(dtServico),
         "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
         ...extra, // Para passar todos os dados originais se necessário
       });
     }
+     // ⭐ NOVIDADE: Ordenar os cards pela quantidade de vagas (maior primeiro)
+    tempCardsData.sort((a, b) {
+      // Converte para int para comparação segura, com fallback para 0
+      int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
+      int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
+      return vagasB.compareTo(vagasA); // Para ordenar do maior para o menor
+    });
     setState(() {
       _escalasExtrasParaCards = tempCardsData;
     });
@@ -171,9 +181,10 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     return {
       // Use 'idSolicitacaoEscalaExtra' se for o ID único da solicitação em si
       // Ou 'idCriacaoEscalaExtra' se for o ID da escala extra original que foi solicitada
-      "id": original["idCriacaoEscalaExtra"] ?? original["idSolicitacaoEscalaExtra"], 
+      "id": original["idCriacaoEscalaExtra"] ?? original["idSolicitacaoEscalaExtra"],
       "titulo": original["nmEscalaExtra"] ?? "Sem nome",
       "setor": setorNome, // Agora ele deve buscar o nome correto do setor
+      "vagas": original["qtdVagas"],
       "data": DateFormat("dd-MM-yyyy").format(dtServico),
       "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
     };
@@ -190,7 +201,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     // Quando a tela de cadastro é fechada (Navigator.pop), este código é executado
     // Recarregue apenas as solicitações para ser mais eficiente,
     // já que as escalas extras disponíveis e os setores provavelmente não mudaram.
-    _buscarSolicitacoesExtras();
+    _fetchData();
   }
 
   Widget _buildTabelaSolicitacoes() {
@@ -268,11 +279,21 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     String titulo = e["titulo"];
     String setorNome = e["setorNome"];
     String setorDescricao = e["setorDescricao"];
+    // Converte 'vagas' para String. Se for nulo, use "N/A" ou "0" como fallback.
+    int vagasInt = (e["vagas"] is int) ? e["vagas"] : (int.tryParse(e["vagas"]?.toString() ?? '0') ?? 0);
+    String vagas = vagasInt.toString(); // Usa vagasInt para exibir
     String data = e["data"];
     String hora = e["hora"];
 
     return GestureDetector(
-      onTap: () => _navegarParaCadastro(e),
+      // Condição para o onTap:
+      onTap: vagasInt > 0
+          ? () => _navegarParaCadastro(e)
+          : () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Sem vagas disponíveis.")),
+              );
+            },
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         elevation: 3,
@@ -287,6 +308,8 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
               Text(setorNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
               Text(setorDescricao, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 4),
+              // Adicionado o campo "Vagas" aqui
+              Text("Vagas: $vagas"), // Use a variável 'vagas' que já é String
               Text("Data: $data"),
               Text("Hora: $hora"),
             ],

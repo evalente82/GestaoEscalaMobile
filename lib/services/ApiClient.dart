@@ -81,6 +81,7 @@ class ApiClient {
       },
       body: jsonEncode(body),
     );
+    print("✅ Resposta API - Status: ${response.statusCode}, Body: ${response.body}");
 
     if (response.statusCode == 401) {
       await AuthService.clearTokens();
