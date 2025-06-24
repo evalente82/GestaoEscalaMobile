@@ -5,7 +5,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
+// import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
 
 class EscalaExtraScreen extends StatefulWidget {
   const EscalaExtraScreen({super.key});
@@ -77,9 +77,9 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         List<dynamic> data = response["body"];
         setState(() {
           _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-          JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-          String formattedJson = encoder.convert(_extrasDisponiveis);
-          print("✅_extrasDisponiveis: $formattedJson");
+          // JsonEncoder encoder = const JsonEncoder.withIndent('  ');
+          // String formattedJson = encoder.convert(_extrasDisponiveis);
+          //print("✅_extrasDisponiveis: $formattedJson");
         });
       } else {
         throw Exception("Erro ${response["statusCode"]}");
@@ -215,19 +215,15 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
 
   void _navegarParaCadastro(Map<String, dynamic> escalaExtra) async {
     debugPrint("[Flutter] _navegarParaCadastro: Navegando para tela de cadastro.");
+    // ignore: unused_local_variable
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CadastroEscalaExtraScreen(escalaExtra: escalaExtra),
-      ),
+       builder: (context) => CadastroEscalaExtraScreen(escalaExtra: escalaExtra),
+     ),
     );
-
-    if (result != null && result is Map<String, dynamic> && result["cancelado"] != true) {
-      debugPrint("[Flutter] _navegarParaCadastro: Retorno da tela de cadastro. Recarregando dados.");
+    debugPrint("[Flutter] _navegarParaCadastro: Retorno da tela de cadastro. Recarregando dados.");
       await _fetchData();
-    } else {
-      debugPrint("[Flutter] _navegarParaCadastro: Tela de cadastro foi cancelada ou não retornou dados de sucesso.");
-    }
   }
 
   Widget _buildTabelaSolicitacoes() {
