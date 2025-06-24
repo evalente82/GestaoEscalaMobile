@@ -32,13 +32,12 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     setState(() {
       _isLoading = true;
     });
-    // Garante que os setores sejam carregados antes de processar extras e solicitações
     await _buscarSetores();
     await Future.wait([
       _buscarExtrasDisponiveis(),
-      _buscarSolicitacoesExtras(), // Busque as solicitações APÓS os setores estarem disponíveis
+      _buscarSolicitacoesExtras(),
     ]);
-    _processarDadosExtrasParaCards(); // Processa os cards após extras e setores
+    _processarDadosExtrasParaCards();
 
     setState(() {
       _isLoading = false;
@@ -47,7 +46,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
 
   Future<void> _buscarSolicitacoesExtras() async {
     try {
-      // Usamos listen: false porque não queremos reconstruir o widget quando o modelo do usuário muda
       final userModel = Provider.of<UserModel>(context, listen: false);
       if (userModel.idFuncionario.isEmpty) {
         throw Exception("ID do funcionário não disponível.");
@@ -64,7 +62,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         throw Exception("Erro ${response["statusCode"]}");
       }
     } catch (e) {
-      // É uma boa prática imprimir o erro para depuração, mas o SnackBar já informa o usuário
       print("❌ Erro ao carregar Solicitações de escalas extras: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Erro ao carregar Solicitações de escalas extras.")),
@@ -80,14 +77,9 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         List<dynamic> data = response["body"];
         setState(() {
           _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-          // --- MUDANÇA AQUI ---
-        // Cria um codificador JSON com indentação de 2 espaços
-        JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-        // Converte a lista de mapas para uma string JSON formatada
-        String formattedJson = encoder.convert(_extrasDisponiveis);
-
-        print("✅_extrasDisponiveis: $formattedJson");
-        // --- FIM DA MUDANÇA ---
+          JsonEncoder encoder = const JsonEncoder.withIndent('  ');
+          String formattedJson = encoder.convert(_extrasDisponiveis);
+          print("✅_extrasDisponiveis: $formattedJson");
         });
       } else {
         throw Exception("Erro ${response["statusCode"]}");
@@ -120,59 +112,72 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
   }
 
   void _processarDadosExtrasParaCards() {
-  List<Map<String, dynamic>> tempCardsData = [];
-  for (var extra in _extrasDisponiveis) {
-    // --- MUDANÇA AQUI: Adiciona a verificação para 'isAtivo' ---
-    // A propriedade isAtivo pode vir como bool, ou como 0/1 se for de um banco de dados
-    // Vamos garantir que só processamos se for explicitamente true
-    bool isAtivo = false;
-    if (extra.containsKey("isAtivo")) {
-      if (extra["isAtivo"] is bool) {
-        isAtivo = extra["isAtivo"];
-      } else if (extra["isAtivo"] is int) {
-        isAtivo = extra["isAtivo"] == 1;
+    List<Map<String, dynamic>> tempCardsData = [];
+    // Pega a data e hora atual do dispositivo e a converte para UTC
+    // Depois, ajusta para o fuso horário local (GMT-3) para comparação
+    final DateTime nowAdjustedForComparison = ajustarFusoHorario(DateTime.now().toUtc());
+
+    for (var extra in _extrasDisponiveis) {
+      bool isAtivo = false;
+      if (extra.containsKey("isAtivo")) {
+        if (extra["isAtivo"] is bool) {
+          isAtivo = extra["isAtivo"];
+        } else if (extra["isAtivo"] is int) {
+          isAtivo = extra["isAtivo"] == 1;
+        }
       }
-      // Outros tipos podem ser adicionados se necessário, como String 'true'/'false'
+
+      // Convertendo dtAbertura e dtFechamento para UTC e depois ajustando para o fuso horário local
+      // Isso é crucial para que a comparação com 'nowAdjustedForComparison' seja precisa.
+      DateTime? dtAberturaApi = DateTime.tryParse(extra["dtAbertura"] ?? '');
+      DateTime? dtFechamentoApi = DateTime.tryParse(extra["dtFechamento"] ?? '');
+
+      // Garantir que as datas da API sejam tratadas como UTC, se tiverem 'Z' já são.
+      // Se não tiverem 'Z' e forem enviadas como local sem fuso, `toUtc()` as converterá.
+      final DateTime dtAberturaUtc = dtAberturaApi?.toUtc() ?? DateTime(0);
+      final DateTime dtFechamentoUtc = dtFechamentoApi?.toUtc() ?? DateTime(0);
+
+      // Ajusta as datas de abertura e fechamento para o fuso horário local (GMT-3)
+      final DateTime adjustedDtAbertura = ajustarFusoHorario(dtAberturaUtc);
+      final DateTime adjustedDtFechamento = ajustarFusoHorario(dtFechamentoUtc);
+
+      // Apenas adiciona o card se estiver ativo E dentro do período de abertura/fechamento
+      if (isAtivo && nowAdjustedForComparison.isAfter(adjustedDtAbertura) && nowAdjustedForComparison.isBefore(adjustedDtFechamento)) {
+        final setor = _setores.firstWhere(
+          (s) => s["idSetor"] == extra["idSetor"],
+          orElse: () => {"nmNome": "Sem setor", "nmDescricao": "Sem descrição"},
+        );
+
+        // A data do serviço (`dtEscalaExtra`) já vem em UTC, então `DateTime.tryParse` a interpretará corretamente.
+        // Não precisamos de `.toUtc()` extra aqui se ela já tem o 'Z'.
+        DateTime? dtServicoUtc = DateTime.tryParse(extra["dtEscalaExtra"] ?? '');
+        final DateTime dtServico = dtServicoUtc ?? DateTime(0);
+
+        tempCardsData.add({
+          "idCriacaoEscalaExtra": extra["idCriacaoEscalaExtra"],
+          "titulo": extra["nmEscalaExtra"] ?? "Sem nome",
+          "setorNome": setor["nmNome"],
+          "setorDescricao": setor["nmDescricao"],
+          "vagas": extra["qtdVagas"] ?? 0,
+          // Exibe a data e hora do serviço, ajustadas para o fuso horário local
+          "data": DateFormat("dd-MM-yyyy").format(ajustarFusoHorario(dtServico)),
+          "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
+          ...extra,
+        });
+      }
     }
-
-    if (isAtivo) { // Somente adiciona se 'isAtivo' for true
-      // Encontra o setor correspondente
-      final setor = _setores.firstWhere(
-        (s) => s["idSetor"] == extra["idSetor"],
-        orElse: () => {"nmNome": "Sem setor", "nmDescricao": "Sem descrição"}, // Fallback
-      );
-
-      DateTime parseOrNull(String? iso) =>
-          iso != null ? DateTime.tryParse(iso)! : DateTime(0);
-
-      final dtServico = parseOrNull(extra["dtEscalaExtra"]);
-
-      tempCardsData.add({
-        "idCriacaoEscalaExtra": extra["idCriacaoEscalaExtra"], // Mantenha esta chave para o CadastroEscalaExtraScreen
-        "titulo": extra["nmEscalaExtra"] ?? "Sem nome",
-        "setorNome": setor["nmNome"], // Nome do setor
-        "setorDescricao": setor["nmDescricao"], // Descrição do setor
-        "vagas": extra["qtdVagas"] ?? 0, // Garante que 'vagas' seja um número, com fallback para 0
-        "data": DateFormat("dd-MM-yyyy").format(dtServico),
-        "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
-        ...extra, // Para passar todos os dados originais se necessário
-      });
-    }
+    tempCardsData.sort((a, b) {
+      int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
+      int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
+      return vagasB.compareTo(vagasA);
+    });
+    setState(() {
+      _escalasExtrasParaCards = tempCardsData;
+    });
   }
-  // ⭐ NOVIDADE: Ordenar os cards pela quantidade de vagas (maior primeiro)
-  tempCardsData.sort((a, b) {
-    // Converte para int para comparação segura, com fallback para 0
-    int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
-    int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
-    return vagasB.compareTo(vagasA); // Para ordenar do maior para o menor
-  });
-  setState(() {
-    _escalasExtrasParaCards = tempCardsData;
-  });
-}
 
   DateTime ajustarFusoHorario(DateTime dt) {
-    // Como estamos no Brasil e a hora da API é Z (UTC), subtrair 3 horas é o correto para Brasília/Rio (GMT-3)
+    // Como a API retorna datas em UTC ('Z'), subtrair 3 horas é o correto para GMT-3 (Brasília/Rio)
     return dt.subtract(const Duration(hours: 3));
   }
 
@@ -182,49 +187,47 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
   }
 
   Map<String, dynamic> _formatarEscalaExtra(Map<String, dynamic> original) {
-    DateTime parseOrNull(String? iso) =>
-        iso != null ? DateTime.tryParse(iso)! : DateTime(0);
-
-    final dtServico = parseOrNull(original["dtEscalaExtra"]);
+    // Para as solicitações, o dtEscalaExtra já vem em UTC.
+    DateTime? dtServicoUtc = DateTime.tryParse(original["dtEscalaExtra"] ?? '');
+    final dtServico = dtServicoUtc ?? DateTime(0);
 
     String setorNome = "Sem setor";
-    // Priorize buscar pelo idSetor na lista de setores (que já está carregada)
     if (original.containsKey("idSetor") && original["idSetor"] != null) {
       final setorEncontrado = _setores.firstWhere(
         (s) => s["idSetor"] == original["idSetor"],
-        orElse: () => {"nmNome": "Sem setor"}, // Fallback para "Sem setor" se não encontrar
+        orElse: () => {"nmNome": "Sem setor"},
       );
       setorNome = setorEncontrado["nmNome"];
-    }
-    // Se não encontrou pelo idSetor, mas a resposta da solicitação já tem o nome do setor diretamente
-    else if (original.containsKey("nmSetor") && original["nmSetor"] != null) {
+    } else if (original.containsKey("nmSetor") && original["nmSetor"] != null) {
       setorNome = original["nmSetor"];
     }
 
     return {
-      // Use 'idSolicitacaoEscalaExtra' se for o ID único da solicitação em si
-      // Ou 'idCriacaoEscalaExtra' se for o ID da escala extra original que foi solicitada
       "id": original["idCriacaoEscalaExtra"] ?? original["idSolicitacaoEscalaExtra"],
       "titulo": original["nmEscalaExtra"] ?? "Sem nome",
-      "setor": setorNome, // Agora ele deve buscar o nome correto do setor
+      "setor": setorNome,
       "vagas": original["qtdVagas"],
-      "data": DateFormat("dd-MM-yyyy").format(dtServico),
+      // Exibe a data e hora ajustadas para o fuso horário local
+      "data": DateFormat("dd-MM-yyyy").format(ajustarFusoHorario(dtServico)),
       "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
     };
   }
 
   void _navegarParaCadastro(Map<String, dynamic> escalaExtra) async {
-    // Usamos 'await' aqui para esperar o retorno da tela de cadastro
-    await Navigator.push(
+    debugPrint("[Flutter] _navegarParaCadastro: Navegando para tela de cadastro.");
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CadastroEscalaExtraScreen(escalaExtra: escalaExtra),
       ),
     );
-    // Quando a tela de cadastro é fechada (Navigator.pop), este código é executado
-    // Recarregue apenas as solicitações para ser mais eficiente,
-    // já que as escalas extras disponíveis e os setores provavelmente não mudaram.
-    _fetchData();
+
+    if (result != null && result is Map<String, dynamic> && result["cancelado"] != true) {
+      debugPrint("[Flutter] _navegarParaCadastro: Retorno da tela de cadastro. Recarregando dados.");
+      await _fetchData();
+    } else {
+      debugPrint("[Flutter] _navegarParaCadastro: Tela de cadastro foi cancelada ou não retornou dados de sucesso.");
+    }
   }
 
   Widget _buildTabelaSolicitacoes() {
@@ -259,7 +262,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator()) // Indicador de carregamento
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16),
               child: SingleChildScrollView(
@@ -268,7 +271,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
                   children: [
                     Text("Escalas Extras Disponíveis", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
-                    // Se não houver extras disponíveis, exibe uma mensagem
                     _escalasExtrasParaCards.isEmpty
                         ? const Center(
                             child: Padding(
@@ -282,7 +284,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
                     const SizedBox(height: 30),
                     Text("RAS / Extras Solicitados", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
-                    // Se não houver solicitações, exibe uma mensagem
                     _solicitacoesExtrasDisponiveis.isEmpty
                         ? const Center(
                             child: Padding(
@@ -302,14 +303,12 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     String titulo = e["titulo"];
     String setorNome = e["setorNome"];
     String setorDescricao = e["setorDescricao"];
-    // Converte 'vagas' para String. Se for nulo, use "N/A" ou "0" como fallback.
     int vagasInt = (e["vagas"] is int) ? e["vagas"] : (int.tryParse(e["vagas"]?.toString() ?? '0') ?? 0);
-    String vagas = vagasInt.toString(); // Usa vagasInt para exibir
+    String vagas = vagasInt.toString();
     String data = e["data"];
     String hora = e["hora"];
 
     return GestureDetector(
-      // Condição para o onTap:
       onTap: vagasInt > 0
           ? () => _navegarParaCadastro(e)
           : () {
@@ -331,8 +330,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
               Text(setorNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
               Text(setorDescricao, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 4),
-              // Adicionado o campo "Vagas" aqui
-              Text("Vagas: $vagas"), // Use a variável 'vagas' que já é String
+              Text("Vagas: $vagas"),
               Text("Data: $data"),
               Text("Hora: $hora"),
             ],
