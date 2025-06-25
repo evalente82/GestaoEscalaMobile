@@ -168,7 +168,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         });
       }
     }
-<<<<<<< HEAD
     tempCardsData.sort((a, b) {
       int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
       int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
@@ -178,17 +177,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
       _escalasExtrasParaCards = tempCardsData;
     });
   }
-  // ⭐ NOVIDADE: Ordenar os cards pela quantidade de vagas (maior primeiro)
-  tempCardsData.sort((a, b) {
-    // Converte para int para comparação segura, com fallback para 0
-    int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
-    int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
-    return vagasB.compareTo(vagasA); // Para ordenar do maior para o menor
-  });
-  setState(() {
-    _escalasExtrasParaCards = tempCardsData;
-  });
-}
+ 
 
   DateTime ajustarFusoHorario(DateTime dt) {
     // Como a API retorna datas em UTC ('Z'), subtrair 3 horas é o correto para GMT-3 (Brasília/Rio)

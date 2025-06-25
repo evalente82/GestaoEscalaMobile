@@ -133,6 +133,23 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
   void _cadastrarFuncionario() async {
     debugPrint("[Flutter] _cadastrarFuncionario: Iniciado.");
 
+    // 1. Acessar o user model para obter os dados do usuário logado
+  final userModel = Provider.of<UserModel>(context, listen: false);
+
+  // 2. Comparar a matrícula digitada com a matrícula do usuário logado
+  if (_matriculaController.text != userModel.userMatricula) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("A matrícula digitada não corresponde à sua. Verifique e tente novamente."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    debugPrint("[Flutter] Falha na validação: Matrícula digitada (${_matriculaController.text}) não confere com a do usuário (${userModel.userMatricula}).");
+    return; // Interrompe a execução aqui
+  }
+
     // Validação básica do campo de matrícula (opcional, mas recomendado)
     if (_matriculaController.text.isEmpty) {
       if (mounted) {
@@ -167,7 +184,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
       }
     }
 
-    final userModel = Provider.of<UserModel>(context, listen: false);
+    //final userModel = Provider.of<UserModel>(context, listen: false);
 
     if (userModel.idFuncionario.isEmpty) {
       if (mounted) {
