@@ -1,11 +1,12 @@
 
+
 import 'package:escala_mobile/models/user_model.dart';
 import 'package:escala_mobile/screens/EscalaExtra/cadastro_escala_extra.dart';
 import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
- import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
+import 'dart:convert';
 
 class EscalaExtraScreen extends StatefulWidget {
   const EscalaExtraScreen({super.key});
@@ -29,9 +30,11 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
   }
 
   Future<void> _fetchData() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
+
     await _buscarSetores();
     await Future.wait([
       _buscarExtrasDisponiveis(),
@@ -39,9 +42,11 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     ]);
     _processarDadosExtrasParaCards();
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _buscarSolicitacoesExtras() async {
@@ -53,107 +58,93 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
 
       final response = await ApiClient.get("/solicitacaoEscalaExtra/BuscarPorId/${userModel.idFuncionario}");
 
-      if (response["statusCode"] == 200) {
-        List<dynamic> data = response["body"];
-        setState(() {
-          _solicitacoesExtrasDisponiveis = data.map((e) => _formatarEscalaExtra(e)).toList();
-        });
-      } else {
-        throw Exception("Erro ${response["statusCode"]}");
+      if (mounted) {
+        if (response["statusCode"] == 200) {
+          List<dynamic> data = response["body"];
+          setState(() {
+            _solicitacoesExtrasDisponiveis = data.map((e) => _formatarSolicitacao(e)).toList();
+          });
+        } else {
+          throw Exception("Erro ${response["statusCode"]}");
+        }
       }
     } catch (e) {
       print("❌ Erro ao carregar Solicitações de escalas extras: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro ao carregar Solicitações de escalas extras.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao carregar suas solicitações de extra.")),
+        );
+      }
     }
   }
 
   Future<void> _buscarExtrasDisponiveis() async {
     try {
       final response = await ApiClient.get('/escalaExtra/buscarExtras');
-
-      if (response["statusCode"] == 200) {
-        List<dynamic> data = response["body"];
-        setState(() {
-          _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-          JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-          String formattedJson = encoder.convert(_extrasDisponiveis);
-          print("✅_extrasDisponiveis: $formattedJson");
-        });
-      } else {
-        throw Exception("Erro ${response["statusCode"]}");
+      if (mounted) {
+        if (response["statusCode"] == 200) {
+          List<dynamic> data = response["body"];
+          setState(() {
+            _extrasDisponiveis = data.cast<Map<String, dynamic>>();
+          });
+        } else {
+          throw Exception("Erro ${response["statusCode"]}");
+        }
       }
     } catch (e) {
       print("❌ Erro ao carregar escalas extras disponíveis: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro ao carregar escalas extras disponíveis.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao carregar escalas extras disponíveis.")),
+        );
+      }
     }
   }
 
   Future<void> _buscarSetores() async {
     try {
       final response = await ApiClient.get('/setor/buscarTodos');
-      if (response["statusCode"] == 200) {
-        List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(response["body"]);
-        setState(() {
-          _setores = data;
-        });
-      } else {
-        throw Exception("Erro ${response["statusCode"]}");
+      if (mounted) {
+        if (response["statusCode"] == 200) {
+          List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(response["body"]);
+          setState(() {
+            _setores = data;
+          });
+        } else {
+          throw Exception("Erro ${response["statusCode"]}");
+        }
       }
     } catch (e) {
       print("❌ Erro ao carregar setores: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro ao carregar setores.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao carregar setores.")),
+        );
+      }
     }
   }
 
   void _processarDadosExtrasParaCards() {
-
     List<Map<String, dynamic>> tempCardsData = [];
-    // Pega a data e hora atual do dispositivo e a converte para UTC
-    // Depois, ajusta para o fuso horário local (GMT-3) para comparação
     final DateTime nowAdjustedForComparison = ajustarFusoHorario(DateTime.now().toUtc());
 
     for (var extra in _extrasDisponiveis) {
-      bool isAtivo = false;
-      if (extra.containsKey("isAtivo")) {
-        if (extra["isAtivo"] is bool) {
-          isAtivo = extra["isAtivo"];
-        } else if (extra["isAtivo"] is int) {
-          isAtivo = extra["isAtivo"] == 1;
-        }
-      }
-
-
-      // Convertendo dtAbertura e dtFechamento para UTC e depois ajustando para o fuso horário local
-      // Isso é crucial para que a comparação com 'nowAdjustedForComparison' seja precisa.
+      bool isAtivo = extra["isAtivo"] ?? false;
       DateTime? dtAberturaApi = DateTime.tryParse(extra["dtAbertura"] ?? '');
       DateTime? dtFechamentoApi = DateTime.tryParse(extra["dtFechamento"] ?? '');
 
-      // Garantir que as datas da API sejam tratadas como UTC, se tiverem 'Z' já são.
-      // Se não tiverem 'Z' e forem enviadas como local sem fuso, `toUtc()` as converterá.
-      final DateTime dtAberturaUtc = dtAberturaApi?.toUtc() ?? DateTime(0);
-      final DateTime dtFechamentoUtc = dtFechamentoApi?.toUtc() ?? DateTime(0);
+      if (dtAberturaApi == null || dtFechamentoApi == null) continue;
 
-      // Ajusta as datas de abertura e fechamento para o fuso horário local (GMT-3)
-      final DateTime adjustedDtAbertura = ajustarFusoHorario(dtAberturaUtc);
-      final DateTime adjustedDtFechamento = ajustarFusoHorario(dtFechamentoUtc);
+      final DateTime adjustedDtAbertura = ajustarFusoHorario(dtAberturaApi.toUtc());
+      final DateTime adjustedDtFechamento = ajustarFusoHorario(dtFechamentoApi.toUtc());
 
-      // Apenas adiciona o card se estiver ativo E dentro do período de abertura/fechamento
       if (isAtivo && nowAdjustedForComparison.isAfter(adjustedDtAbertura) && nowAdjustedForComparison.isBefore(adjustedDtFechamento)) {
-        final setor = _setores.firstWhere(
-          (s) => s["idSetor"] == extra["idSetor"],
-          orElse: () => {"nmNome": "Sem setor", "nmDescricao": "Sem descrição"},
-        );
+        final setor = _setores.firstWhere((s) => s["idSetor"] == extra["idSetor"],
+            orElse: () => {"nmNome": "Sem setor", "nmDescricao": "Sem descrição"});
 
-        // A data do serviço (`dtEscalaExtra`) já vem em UTC, então `DateTime.tryParse` a interpretará corretamente.
-        // Não precisamos de `.toUtc()` extra aqui se ela já tem o 'Z'.
         DateTime? dtServicoUtc = DateTime.tryParse(extra["dtEscalaExtra"] ?? '');
-        final DateTime dtServico = dtServicoUtc ?? DateTime(0);
+        if (dtServicoUtc == null) continue;
+        final DateTime dtServico = ajustarFusoHorario(dtServicoUtc);
 
         tempCardsData.add({
           "idCriacaoEscalaExtra": extra["idCriacaoEscalaExtra"],
@@ -161,94 +152,158 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
           "setorNome": setor["nmNome"],
           "setorDescricao": setor["nmDescricao"],
           "vagas": extra["qtdVagas"] ?? 0,
-          // Exibe a data e hora do serviço, ajustadas para o fuso horário local
-          "data": DateFormat("dd-MM-yyyy").format(ajustarFusoHorario(dtServico)),
-          "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
+          "data": DateFormat("dd/MM/yyyy").format(dtServico),
+          "hora": DateFormat("HH:mm").format(dtServico),
           ...extra,
         });
       }
     }
-    tempCardsData.sort((a, b) {
-      int vagasA = (a["vagas"] is int) ? a["vagas"] : (int.tryParse(a["vagas"]?.toString() ?? '0') ?? 0);
-      int vagasB = (b["vagas"] is int) ? b["vagas"] : (int.tryParse(b["vagas"]?.toString() ?? '0') ?? 0);
-      return vagasB.compareTo(vagasA);
-    });
-    setState(() {
-      _escalasExtrasParaCards = tempCardsData;
-    });
+    tempCardsData.sort((a, b) => (b["vagas"] ?? 0).compareTo(a["vagas"] ?? 0));
+    
+    if (mounted) {
+      setState(() {
+        _escalasExtrasParaCards = tempCardsData;
+      });
+    }
   }
- 
 
   DateTime ajustarFusoHorario(DateTime dt) {
-    // Como a API retorna datas em UTC ('Z'), subtrair 3 horas é o correto para GMT-3 (Brasília/Rio)
     return dt.subtract(const Duration(hours: 3));
   }
 
-  String formatarDataHora(DateTime dateTime) {
-    final adjustedDateTime = ajustarFusoHorario(dateTime);
-    return DateFormat("dd-MM-yyyy HH:mm").format(adjustedDateTime);
-  }
-
-  Map<String, dynamic> _formatarEscalaExtra(Map<String, dynamic> original) {
-    // Para as solicitações, o dtEscalaExtra já vem em UTC.
+  Map<String, dynamic> _formatarSolicitacao(Map<String, dynamic> original) {
     DateTime? dtServicoUtc = DateTime.tryParse(original["dtEscalaExtra"] ?? '');
-    final dtServico = dtServicoUtc ?? DateTime(0);
-
-    String setorNome = "Sem setor";
-    if (original.containsKey("idSetor") && original["idSetor"] != null) {
-      final setorEncontrado = _setores.firstWhere(
-        (s) => s["idSetor"] == original["idSetor"],
-        orElse: () => {"nmNome": "Sem setor"},
-      );
-      setorNome = setorEncontrado["nmNome"];
-    } else if (original.containsKey("nmSetor") && original["nmSetor"] != null) {
-      setorNome = original["nmSetor"];
-    }
-
+    final dtServico = dtServicoUtc != null ? ajustarFusoHorario(dtServicoUtc) : null;
+    
     return {
-      "id": original["idCriacaoEscalaExtra"] ?? original["idSolicitacaoEscalaExtra"],
+      "idInscricao": original["idEscalaExtra"],
       "titulo": original["nmEscalaExtra"] ?? "Sem nome",
-      "setor": setorNome,
-      "vagas": original["qtdVagas"],
-      // Exibe a data e hora ajustadas para o fuso horário local
-      "data": DateFormat("dd-MM-yyyy").format(ajustarFusoHorario(dtServico)),
-      "hora": DateFormat("HH:mm").format(ajustarFusoHorario(dtServico)),
+      "setor": original["nmSetor"] ?? "Sem setor",
+      "data": dtServico != null ? DateFormat("dd/MM/yyyy").format(dtServico) : "N/A",
+      "hora": dtServico != null ? DateFormat("HH:mm").format(dtServico) : "N/A",
+      "statusInscricao": original["statusInscricao"]
     };
   }
 
+  /// ===============================================================
+  /// FUNÇÕES PARA CANCELAR INSCRIÇÃO
+  /// ===============================================================
+
+Future<void> _cancelarInscricaoExtra(String idInscricao) async {
+    try {
+      // 1. Monta a URL com o status como um "query parameter"
+      final String url = "/solicitacaoEscalaExtra/AlterarStatusExtra/$idInscricao?statusInscricao=Cancelado";
+      
+      // 2. O corpo da requisição agora é vazio, pois o status já está na URL.
+      final Map<String, dynamic> body = {};
+
+      // A chamada continua sendo um PUT, que agora está correto.
+      final response = await ApiClient.put(url, body);
+
+      if (mounted) {
+        if (response["statusCode"] == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Inscrição cancelada com sucesso!")),
+          );
+          _fetchData(); // Recarrega os dados para atualizar a tela
+        } else {
+          // Tenta pegar uma mensagem de erro mais clara da API
+          final errorMessage = response["body"]?["mensagem"] ?? "Erro desconhecido ao cancelar.";
+          throw Exception(errorMessage);
+        }
+      }
+    } catch (e) {
+      print("❌ Erro ao cancelar inscrição: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Não foi possível cancelar: $e")),
+        );
+      }
+    }
+  }
+
+  void _mostrarConfirmacaoCancelar(String idInscricao, String titulo, String data) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirmar Cancelamento"),
+          content: Text("Tem certeza que deseja cancelar sua inscrição para:\n\n$titulo\nData: $data?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Voltar"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _cancelarInscricaoExtra(idInscricao);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Confirmar", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// ===============================================================
+
   void _navegarParaCadastro(Map<String, dynamic> escalaExtra) async {
-    debugPrint("[Flutter] _navegarParaCadastro: Navegando para tela de cadastro.");
-    // ignore: unused_local_variable
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
-       builder: (context) => CadastroEscalaExtraScreen(escalaExtra: escalaExtra),
-     ),
+        builder: (context) => CadastroEscalaExtraScreen(escalaExtra: escalaExtra),
+      ),
     );
-    debugPrint("[Flutter] _navegarParaCadastro: Retorno da tela de cadastro. Recarregando dados.");
-      await _fetchData();
+    await _fetchData();
   }
 
   Widget _buildTabelaSolicitacoes() {
-    return DataTable(
-      columnSpacing: 20,
-      horizontalMargin: 10,
-      columns: const [
-        DataColumn(label: Text("Título", style: TextStyle(fontSize: 12))),
-        DataColumn(label: Text("Setor", style: TextStyle(fontSize: 12))),
-        DataColumn(label: Text("Data", style: TextStyle(fontSize: 12))),
-        DataColumn(label: Text("Hora", style: TextStyle(fontSize: 12))),
-      ],
-      rows: _solicitacoesExtrasDisponiveis.map((e) {
-        return DataRow(
-          cells: [
-            DataCell(Text(e["titulo"] ?? '', style: const TextStyle(fontSize: 11))),
-            DataCell(Text(e["setor"] ?? '', style: const TextStyle(fontSize: 11))),
-            DataCell(Text(e["data"] ?? '', style: const TextStyle(fontSize: 11))),
-            DataCell(Text(e["hora"] ?? '', style: const TextStyle(fontSize: 11))),
-          ],
-        );
-      }).toList(),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 20,
+        horizontalMargin: 10,
+        columns: const [
+          DataColumn(label: Text("Título", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text("Setor", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text("Data", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text("Hora", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text("Status", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text("Ação", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+        ],
+        rows: _solicitacoesExtrasDisponiveis.map((e) {
+          final bool isCancelavel = e["statusInscricao"] == "Confirmado" || e["statusInscricao"] == "FilaDeEspera";
+          
+          return DataRow(
+            cells: [
+              DataCell(Text(e["titulo"] ?? '', style: const TextStyle(fontSize: 11))),
+              DataCell(Text(e["setor"] ?? '', style: const TextStyle(fontSize: 11))),
+              DataCell(Text(e["data"] ?? '', style: const TextStyle(fontSize: 11))),
+              DataCell(Text(e["hora"] ?? '', style: const TextStyle(fontSize: 11))),
+              DataCell(
+                Chip(
+                  label: Text(e["statusInscricao"] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.white)),
+                  backgroundColor: e["statusInscricao"] == "Confirmado" ? Colors.green : (e["statusInscricao"] == "FilaDeEspera" ? Colors.orange : Colors.grey),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                )
+              ),
+              DataCell(
+                isCancelavel
+                ? IconButton(
+                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                    tooltip: 'Cancelar Inscrição',
+                    onPressed: () => _mostrarConfirmacaoCancelar(e["idInscricao"], e["titulo"], e["data"]),
+                  )
+                : const SizedBox.shrink(),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -262,23 +317,25 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
+          : RefreshIndicator(
+              onRefresh: _fetchData,
               child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Escalas Extras Disponíveis", style: Theme.of(context).textTheme.titleLarge),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Color(0xFF003580)),
-                        tooltip: 'Atualizar lista',
-                        onPressed: _fetchData, // Chama a função que já recarrega os dados
-                      ),
-                    ],
-                  ),
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Escalas Extras Disponíveis", style: Theme.of(context).textTheme.titleLarge),
+                        IconButton(
+                          icon: const Icon(Icons.refresh, color: Color(0xFF003580)),
+                          tooltip: 'Atualizar lista',
+                          onPressed: _fetchData,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     _escalasExtrasParaCards.isEmpty
                         ? const Center(
@@ -308,27 +365,21 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     );
   }
 
-    Widget _buildCardEscalaExtra(Map<String, dynamic> e) {
+  Widget _buildCardEscalaExtra(Map<String, dynamic> e) {
     String titulo = e["titulo"];
     String setorNome = e["setorNome"];
     String setorDescricao = e["setorDescricao"];
     String data = e["data"];
     String hora = e["hora"];
-
-    // Lógica para obter as vagas (já existente)
-    int vagasInt = (e["vagas"] is int) ? e["vagas"] : (int.tryParse(e["vagas"]?.toString() ?? '0') ?? 0);
-    String vagas = vagasInt.toString();
-
-    int filaEsperaInt = (e["qtdFilaEspera"] is int) 
-                      ? e["qtdFilaEspera"] 
-                      : (int.tryParse(e["qtdFilaEspera"]?.toString() ?? '0') ?? 0);
+    int vagasInt = e["vagas"] ?? 0;
+    int filaEsperaInt = e["qtdFilaEspera"] ?? 0;
 
     return GestureDetector(
-      onTap: filaEsperaInt > 0
+      onTap: (vagasInt > 0 || filaEsperaInt > 0)
           ? () => _navegarParaCadastro(e)
           : () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Sem vagas disponíveis.")),
+                const SnackBar(content: Text("Sem vagas disponíveis ou na fila de espera.")),
               );
             },
       child: Card(
@@ -345,10 +396,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
               Text(setorNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
               Text(setorDescricao, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 4),
-              Text("Vagas: $vagas"),
-              
-              // 2. Adicione o novo Text widget para a Fila de Espera.
-              //    Ele só será exibido se o limite da fila de espera for maior que 0.
+              Text("Vagas: $vagasInt"),
               Text("Fila de Espera: $filaEsperaInt"),
               Text("Data: $data"),
               Text("Hora: $hora"),
