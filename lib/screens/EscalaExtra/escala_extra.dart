@@ -5,7 +5,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-// import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
+ import 'dart:convert'; // Importe esta biblioteca no início do seu arquivo
 
 class EscalaExtraScreen extends StatefulWidget {
   const EscalaExtraScreen({super.key});
@@ -77,9 +77,9 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         List<dynamic> data = response["body"];
         setState(() {
           _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-          // JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-          // String formattedJson = encoder.convert(_extrasDisponiveis);
-          //print("✅_extrasDisponiveis: $formattedJson");
+          JsonEncoder encoder = const JsonEncoder.withIndent('  ');
+          String formattedJson = encoder.convert(_extrasDisponiveis);
+          print("✅_extrasDisponiveis: $formattedJson");
         });
       } else {
         throw Exception("Erro ${response["statusCode"]}");
@@ -268,7 +268,17 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Escalas Extras Disponíveis", style: Theme.of(context).textTheme.titleLarge),
+                    Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Escalas Extras Disponíveis", style: Theme.of(context).textTheme.titleLarge),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Color(0xFF003580)),
+                        tooltip: 'Atualizar lista',
+                        onPressed: _fetchData, // Chama a função que já recarrega os dados
+                      ),
+                    ],
+                  ),
                     const SizedBox(height: 12),
                     _escalasExtrasParaCards.isEmpty
                         ? const Center(
@@ -298,17 +308,23 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
     );
   }
 
-  Widget _buildCardEscalaExtra(Map<String, dynamic> e) {
+    Widget _buildCardEscalaExtra(Map<String, dynamic> e) {
     String titulo = e["titulo"];
     String setorNome = e["setorNome"];
     String setorDescricao = e["setorDescricao"];
-    int vagasInt = (e["vagas"] is int) ? e["vagas"] : (int.tryParse(e["vagas"]?.toString() ?? '0') ?? 0);
-    String vagas = vagasInt.toString();
     String data = e["data"];
     String hora = e["hora"];
 
+    // Lógica para obter as vagas (já existente)
+    int vagasInt = (e["vagas"] is int) ? e["vagas"] : (int.tryParse(e["vagas"]?.toString() ?? '0') ?? 0);
+    String vagas = vagasInt.toString();
+
+    int filaEsperaInt = (e["qtdFilaEspera"] is int) 
+                      ? e["qtdFilaEspera"] 
+                      : (int.tryParse(e["qtdFilaEspera"]?.toString() ?? '0') ?? 0);
+
     return GestureDetector(
-      onTap: vagasInt > 0
+      onTap: filaEsperaInt > 0
           ? () => _navegarParaCadastro(e)
           : () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -330,6 +346,10 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
               Text(setorDescricao, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 4),
               Text("Vagas: $vagas"),
+              
+              // 2. Adicione o novo Text widget para a Fila de Espera.
+              //    Ele só será exibido se o limite da fila de espera for maior que 0.
+              Text("Fila de Espera: $filaEsperaInt"),
               Text("Data: $data"),
               Text("Hora: $hora"),
             ],
