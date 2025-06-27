@@ -192,7 +192,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
 Future<void> _cancelarInscricaoExtra(String idInscricao) async {
     try {
       // 1. Monta a URL com o status como um "query parameter"
-      final String url = "/solicitacaoEscalaExtra/AlterarStatusExtra/$idInscricao?statusInscricao=Cancelado";
+      final String url = "/solicitacaoEscalaExtra/AlterarStatusMobile/$idInscricao?statusInscricao=Cancelado";
       
       // 2. O corpo da requisição agora é vazio, pois o status já está na URL.
       final Map<String, dynamic> body = {};
@@ -216,7 +216,7 @@ Future<void> _cancelarInscricaoExtra(String idInscricao) async {
       print("❌ Erro ao cancelar inscrição: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Não foi possível cancelar: $e")),
+          SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
         );
       }
     }
