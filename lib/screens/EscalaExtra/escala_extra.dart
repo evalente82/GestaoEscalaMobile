@@ -6,7 +6,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
+//import 'dart:convert';
 
 class EscalaExtraScreen extends StatefulWidget {
   const EscalaExtraScreen({super.key});
@@ -86,6 +86,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
           List<dynamic> data = response["body"];
           setState(() {
             _extrasDisponiveis = data.cast<Map<String, dynamic>>();
+            print('extras disponivei 000: $_extrasDisponiveis');
           });
         } else {
           throw Exception("Erro ${response["statusCode"]}");
@@ -125,10 +126,28 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
   }
 
   void _processarDadosExtrasParaCards() {
+
+    // 1. ACESSA OS DADOS DO USUÁRIO LOGADO
+    final userModel = Provider.of<UserModel>(context, listen: false);
+    final String matricula = userModel.userMatricula; // Garanta que 'matricula' é o nome correto da propriedade no seu UserModel
+
+    // 2. DETERMINA QUAL O TIPO DE SERVIÇO PERMITIDO PARA ESTE USUÁRIO
+    final bool matriculaIniciaCom60 = matricula.startsWith('60');
+    final String tipoPermitido = matriculaIniciaCom60 ? 'EXTRA' : 'RAS';
+
     List<Map<String, dynamic>> tempCardsData = [];
     final DateTime nowAdjustedForComparison = ajustarFusoHorario(DateTime.now().toUtc());
 
     for (var extra in _extrasDisponiveis) {
+      // 3. APLICA O FILTRO ANTES DE QUALQUER OUTRA COISA
+      // Pega o tipo de serviço do card atual
+      final String tipoServicoDoCard = extra["tipoServicoExtra"] ?? '';
+      
+      // Se o tipo do card for diferente do tipo permitido para o usuário, pula para o próximo item do loop
+      if (tipoServicoDoCard != tipoPermitido) {
+        continue; 
+      }
+      
       bool isAtivo = extra["isAtivo"] ?? false;
       DateTime? dtAberturaApi = DateTime.tryParse(extra["dtAbertura"] ?? '');
       DateTime? dtFechamentoApi = DateTime.tryParse(extra["dtFechamento"] ?? '');
@@ -184,10 +203,6 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
       "statusInscricao": original["statusInscricao"]
     };
   }
-
-  /// ===============================================================
-  /// FUNÇÕES PARA CANCELAR INSCRIÇÃO
-  /// ===============================================================
 
 Future<void> _cancelarInscricaoExtra(String idInscricao) async {
     try {
@@ -248,7 +263,6 @@ Future<void> _cancelarInscricaoExtra(String idInscricao) async {
     );
   }
 
-  /// ===============================================================
 
   void _navegarParaCadastro(Map<String, dynamic> escalaExtra) async {
     await Navigator.push(
