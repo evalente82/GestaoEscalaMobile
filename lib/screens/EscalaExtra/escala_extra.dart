@@ -298,13 +298,21 @@ Future<void> _cancelarInscricaoExtra(String idInscricao) async {
               DataCell(Text(e["data"] ?? '', style: const TextStyle(fontSize: 11))),
               DataCell(Text(e["hora"] ?? '', style: const TextStyle(fontSize: 11))),
               DataCell(
-                Chip(
-                  label: Text(e["statusInscricao"] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                  backgroundColor: e["statusInscricao"] == "Confirmado" ? Colors.green : (e["statusInscricao"] == "FilaDeEspera" ? Colors.orange : Colors.grey),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  visualDensity: VisualDensity.compact,
-                )
-              ),
+                Container(
+                  // Padding para dar um espaçamento interno, como no Chip
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
+                  decoration: BoxDecoration(
+                    // A mesma lógica de cor que você já usava
+                    color: e["statusInscricao"] == "Confirmado" ? Colors.green : (e["statusInscricao"] == "FilaDeEspera" ? Colors.orange : Colors.grey),
+                    // Adiciona bordas arredondadas para parecer um Chip
+                    borderRadius: BorderRadius.circular(12), 
+                  ),
+                  child: Text(
+                    e["statusInscricao"] ?? 'N/A',
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                ),
+              ),              
               DataCell(
                 isCancelavel
                 ? IconButton(

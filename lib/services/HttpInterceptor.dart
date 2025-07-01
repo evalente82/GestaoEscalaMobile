@@ -7,10 +7,11 @@ class ApiClient {
   static String get baseUrl {
     if (kIsWeb) {
       //return "";
-       return "http://localhost:8080";
+      //  return "http://localhost:8080";
+       return "https://back-gestao-escala.fly.dev";
     }
-    //return "https://back-gestao-escala.fly.dev";
-     return "http://192.168.0.8:8080";
+    return "https://back-gestao-escala.fly.dev";
+     //return "http://192.168.0.8:8080";
   }
 
   static Future<String?> _getToken() async {

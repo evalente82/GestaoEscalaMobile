@@ -3,7 +3,7 @@ import 'package:escala_mobile/services/ApiClient.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:escala_mobile/screens/permutas/solicitacoes_permuta_screen.dart'; // Corrigido o import
+import 'package:escala_mobile/screens/permutas/solicitacoes_permuta_screen.dart';
 
 class PermutaScreen extends StatefulWidget {
   const PermutaScreen({super.key});

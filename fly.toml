@@ -1,0 +1,27 @@
+# fly.toml file generated for mobile-gestao-escala
+
+app = 'mobile-gestao-escala'
+primary_region = 'gru' # Ou a região que você escolheu
+
+[build]
+  dockerfile = 'Dockerfile'
+
+# AJUSTE DE PORTA: Verifique esta seção
+[[services]]
+  protocol = 'tcp'
+  internal_port = 3000  # A porta interna da sua aplicação
+  processes = ['app']
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
+  
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 25
+    soft_limit = 20
