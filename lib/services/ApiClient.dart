@@ -25,18 +25,18 @@ class ApiClient {
       final decodedToken = decodeJwt(token);
       final exp = decodedToken['exp'] as int?;
       if (exp != null && DateTime.now().millisecondsSinceEpoch ~/ 1000 >= exp && refreshToken != null) {
-        print("🔄 Token expirado, renovando...");
+        //print("🔄 Token expirado, renovando...");
         final refreshResponse = await AuthService.refreshToken(refreshToken);
         if (refreshResponse["success"] == true) {
           token = refreshResponse["token"];
           final newRefreshToken = refreshResponse["refreshToken"];
           await prefs.setString('jwt_token', token!);
           await prefs.setString('refresh_token', newRefreshToken);
-          print("✅ Token renovado com sucesso!");
+          //print("✅ Token renovado com sucesso!");
         } else {
           await AuthService.clearTokens();
           token = null;
-          print("❌ Falha ao renovar token, usuário deslogado.");
+          //print("❌ Falha ao renovar token, usuário deslogado.");
         }
       }
       return token;
@@ -48,7 +48,7 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 GET: $url");
+    //print("📡 GET: $url");
 
     final response = await http.get(
       url,
@@ -71,8 +71,8 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 POST: $url");
-    print("📤 Enviando: ${jsonEncode(body)}");
+    //print("📡 POST: $url");
+    //print("📤 Enviando: ${jsonEncode(body)}");
 
     final response = await http.post(
       url,
@@ -82,7 +82,7 @@ class ApiClient {
       },
       body: jsonEncode(body),
     );
-    print("✅ Resposta API - Status: ${response.statusCode}, Body: ${response.body}");
+    //print("✅ Resposta API - Status: ${response.statusCode}, Body: ${response.body}");
 
     if (response.statusCode == 401) {
       await AuthService.clearTokens();
@@ -97,8 +97,8 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 PUT: $url");
-    print("📤 Enviando: ${jsonEncode(body)}");
+    //print("📡 PUT: $url");
+    //print("📤 Enviando: ${jsonEncode(body)}");
 
     final response = await http.put(
       url,
@@ -122,7 +122,7 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 DELETE: $url");
+    //print("📡 DELETE: $url");
 
     final response = await http.delete(
       url,

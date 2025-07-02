@@ -28,23 +28,23 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final userModel = Provider.of<UserModel>(context, listen: false);
       if (userModel.idFuncionario.isEmpty) {
-        print("⚠️ ID do funcionário não disponível.");
+        //print("⚠️ ID do funcionário não disponível.");
         return;
       }
 
       final String url = "/permutas/ContarPendentes/${userModel.idFuncionario}";
-      print("📡 Buscando contagem de permutas pendentes: $url");
+      //print("📡 Buscando contagem de permutas pendentes: $url");
 
       final response = await ApiClient.get(url);
       if (response["statusCode"] == 200) {
         final int count = response["body"] as int;
         userModel.setInitialNotificationCount(count);
-        print("✅ Contagem de permutas pendentes carregada: $count");
+        //print("✅ Contagem de permutas pendentes carregada: $count");
       } else {
-        print("❌ Erro ao buscar contagem de permutas: ${response["statusCode"]} - ${response["body"]}");
+        //print("❌ Erro ao buscar contagem de permutas: ${response["statusCode"]} - ${response["body"]}");
       }
     } catch (e) {
-      print("❌ Exceção ao carregar contagem de permutas: $e");
+      //print("❌ Exceção ao carregar contagem de permutas: $e");
     }
   }
 

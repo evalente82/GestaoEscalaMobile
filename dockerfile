@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libglu1-mesa \
     && rm -rf /var/lib/apt/lists/*
 
-ARG FLUTTER_VERSION=3.22.2
+ARG FLUTTER_VERSION=3.32.4
 RUN curl -fSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" -o flutter.tar.xz \
     && tar -xJf flutter.tar.xz -C /opt/ \
     && rm flutter.tar.xz

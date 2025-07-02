@@ -15,7 +15,7 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        print("📩 Notificação clicada: ${response.payload}");
+        //print("📩 Notificação clicada: ${response.payload}");
         // Aqui você pode adicionar lógica para navegação ao clicar na notificação
       },
     );

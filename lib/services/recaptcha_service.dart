@@ -16,7 +16,7 @@ class RecaptchaService {
         final String token = await promiseToFuture(getRecaptchaToken(action));
         return token;
       } catch (e) {
-        debugPrint("Erro ao obter token reCAPTCHA na web: $e");
+        //debugPrint("Erro ao obter token reCAPTCHA na web: $e");
         return null;
       }
     } else {

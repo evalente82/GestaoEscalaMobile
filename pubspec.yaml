@@ -6,7 +6,7 @@ version: 1.0.0+1
 
 environment:
   # Compatível com Flutter 3.22.2
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.8.1 <4.0.0'
 
 dependencies:
   flutter:
@@ -21,7 +21,7 @@ dependencies:
   equatable: ^2.0.5
   cupertino_icons: ^1.0.8
   # A versão estável mais recente do intl
-  intl: 0.19.0
+  intl: 0.20.2
   logger: ^2.3.0
   pdf: ^3.10.8
   path_provider: ^2.1.3
@@ -44,12 +44,28 @@ dev_dependencies:
   json_serializable: ^6.8.0
   flutter_launcher_icons: ^0.13.1
 
-flutter_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/icon/SalvamentoMaritimo.png"
-
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+
+flutter_launcher_icons:
+  # --- Configuração Geral ---
+  # Este é o caminho para a sua imagem MESTRE.
+  # Verifique se o arquivo existe em: assets/icon/icone_defesacivil_1024.png
+  image_path: "assets/icon/icone_defesacivil_1024.png"
+
+  # --- Configuração para Android e iOS ---
+  android: true
+  ios: true
+  remove_alpha_ios: true
+
+  # --- Configuração para Web ---
+  web:
+    generate: true
+    # A cor de fundo que aparecerá na tela de splash do PWA
+    background_color: "#0175C2" 
+    # A cor do tema da barra do navegador no PWA
+    theme_color: "#0175C2"
+    

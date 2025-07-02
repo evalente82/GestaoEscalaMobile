@@ -25,43 +25,43 @@ class UserModel with ChangeNotifier {
     if (token != null) _token = token;
     if (refreshToken != null) _refreshToken = refreshToken;
     notifyListeners();
-    print("👤 UserModel atualizado via setUser - Nome: $_userName, Matrícula: $_userMatricula, ID: $_idFuncionario");
+    //print("👤 UserModel atualizado via setUser - Nome: $_userName, Matrícula: $_userMatricula, ID: $_idFuncionario");
   }
 
   Future<bool> loadUserFromToken() async {
     String? token = await AuthService.getToken();
     String? refreshToken = await AuthService.getRefreshToken();
 
-    print("🚀 Iniciando loadUserFromToken...");
-    print("🔍 Token carregado ao abrir o app: $token");
-    print("🔍 RefreshToken carregado ao abrir o app: $refreshToken");
+    //print("🚀 Iniciando loadUserFromToken...");
+    //print("🔍 Token carregado ao abrir o app: $token");
+    //print("🔍 RefreshToken carregado ao abrir o app: $refreshToken");
 
     if (token != null && token.isNotEmpty) {
       final decodedToken = decodeJwt(token);
-      print("🔍 Token decodificado: $decodedToken");
+      //print("🔍 Token decodificado: $decodedToken");
       final exp = decodedToken['exp'] as int?;
 
       if (exp != null && DateTime.now().millisecondsSinceEpoch ~/ 1000 < exp) {
         _updateUserFromToken(token, refreshToken ?? "");
-        print("✅ Token válido carregado.");
+        //print("✅ Token válido carregado.");
         return true;
       } else if (refreshToken != null && refreshToken.isNotEmpty) {
         _refreshToken = refreshToken;
-        print("🔄 Token expirado, tentando renovar com refreshToken: $_refreshToken");
+        //print("🔄 Token expirado, tentando renovar com refreshToken: $_refreshToken");
         return await _refreshUserToken();
       } else {
-        print("⚠️ RefreshToken está vazio ou não disponível para renovação.");
+        //print("⚠️ RefreshToken está vazio ou não disponível para renovação.");
       }
     }
-    print("❌ Nenhum token válido encontrado.");
+    //print("❌ Nenhum token válido encontrado.");
     return false;
   }
 
   Future<bool> _refreshUserToken() async {
     try {
-      print("🔄 Tentando renovar o token com refreshToken: $_refreshToken");
+      //print("🔄 Tentando renovar o token com refreshToken: $_refreshToken");
       final response = await AuthService.refreshToken(_refreshToken);
-      print("🔍 Resposta completa do refresh: $response");
+      //print("🔍 Resposta completa do refresh: $response");
 
       if (response["success"] == true) {
         final newToken = response["token"] as String;
@@ -69,14 +69,14 @@ class UserModel with ChangeNotifier {
         await AuthService.saveToken(newToken);
         await AuthService.saveRefreshToken(newRefreshToken);
         _updateUserFromToken(newToken, newRefreshToken);
-        print("✅ Token renovado com sucesso!");
+        //print("✅ Token renovado com sucesso!");
         return true;
       } else {
-        print("❌ Falha ao renovar o token: ${response["message"]}");
+        //print("❌ Falha ao renovar o token: ${response["message"]}");
         await AuthService.clearTokens();
       }
     } catch (e) {
-      print("❌ Erro ao renovar token: $e");
+      //print("❌ Erro ao renovar token: $e");
       await AuthService.clearTokens();
     }
     return false;
@@ -84,7 +84,7 @@ class UserModel with ChangeNotifier {
 
   void _updateUserFromToken(String token, String refreshToken) {
     final decodedToken = decodeJwt(token);
-    print("🔍 Token decodificado em _updateUserFromToken: $decodedToken");
+    //print("🔍 Token decodificado em _updateUserFromToken: $decodedToken");
     
     if (decodedToken.containsKey("unique_name") || decodedToken.containsKey("nomeUsuario")) {
       _userName = decodedToken["unique_name"] ?? decodedToken["nomeUsuario"] ?? _userName;
@@ -99,7 +99,7 @@ class UserModel with ChangeNotifier {
     _token = token;
     _refreshToken = refreshToken;
     notifyListeners();
-    print("🔄 Dados do token atualizados - Nome: $_userName, Matrícula: $_userMatricula, ID: $_idFuncionario");
+    //print("🔄 Dados do token atualizados - Nome: $_userName, Matrícula: $_userMatricula, ID: $_idFuncionario");
   }
 
   void clearUser() async {
@@ -112,7 +112,7 @@ class UserModel with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('notificationCount', 0);
     notifyListeners();
-    print("🗑️ Dados do usuário limpos.");
+    //print("🗑️ Dados do usuário limpos.");
   }
 
   void incrementNotificationCount() async {
@@ -120,7 +120,7 @@ class UserModel with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('notificationCount', _notificationCount);
     notifyListeners();
-    print("🔔 Contador de notificações incrementado: $_notificationCount");
+    //print("🔔 Contador de notificações incrementado: $_notificationCount");
   }
 
   void clearNotificationCount() async {
@@ -128,7 +128,7 @@ class UserModel with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('notificationCount', 0);
     notifyListeners();
-    print("🔔 Contador de notificações limpo.");
+    //print("🔔 Contador de notificações limpo.");
   }
 
   void setInitialNotificationCount(int count) async {
@@ -136,6 +136,6 @@ class UserModel with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('notificationCount', count);
     notifyListeners();
-    print("🔔 Contador inicial de notificações definido: $_notificationCount");
+    //print("🔔 Contador inicial de notificações definido: $_notificationCount");
   }
 }

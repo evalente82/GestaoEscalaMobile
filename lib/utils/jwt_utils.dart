@@ -14,10 +14,10 @@ Map<String, dynamic> decodeJwt(String token) {
     final String decodedString = utf8.decode(decodedPayload);
     final Map<String, dynamic> decodedMap = jsonDecode(decodedString);
 
-    print("🔍 Decodificação JWT - Payload bruto: $decodedString");
+    //print("🔍 Decodificação JWT - Payload bruto: $decodedString");
     return decodedMap;
   } catch (e) {
-    print("❌ Erro ao decodificar JWT: $e");
+    //print("❌ Erro ao decodificar JWT: $e");
     return {};
   }
 }

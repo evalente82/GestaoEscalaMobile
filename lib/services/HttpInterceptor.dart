@@ -23,7 +23,7 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 GET: $url");
+    //print("📡 GET: $url");
 
     final response = await http.get(
       url,
@@ -40,8 +40,8 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 POST: $url");
-    print("📤 Enviando: ${jsonEncode(body)}");
+    //("📡 POST: $url");
+    //print("📤 Enviando: ${jsonEncode(body)}");
 
     final response = await http.post(
       url,
@@ -59,8 +59,8 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 PUT: $url");
-    print("📤 Enviando: ${jsonEncode(body)}");
+    //print("📡 PUT: $url");
+    //print("📤 Enviando: ${jsonEncode(body)}");
 
     final response = await http.put(
       url,
@@ -78,7 +78,7 @@ class ApiClient {
     final token = await _getToken();
     final url = Uri.parse("$baseUrl$endpoint");
 
-    print("📡 DELETE: $url");
+    //print("📡 DELETE: $url");
 
     final response = await http.delete(
       url,

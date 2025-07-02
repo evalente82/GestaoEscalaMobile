@@ -69,7 +69,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         }
       }
     } catch (e) {
-      print("❌ Erro ao carregar Solicitações de escalas extras: $e");
+      //print("❌ Erro ao carregar Solicitações de escalas extras: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erro ao carregar suas solicitações de extra.")),
@@ -86,14 +86,14 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
           List<dynamic> data = response["body"];
           setState(() {
             _extrasDisponiveis = data.cast<Map<String, dynamic>>();
-            print('extras disponivei 000: $_extrasDisponiveis');
+            //print('extras disponivei 000: $_extrasDisponiveis');
           });
         } else {
           throw Exception("Erro ${response["statusCode"]}");
         }
       }
     } catch (e) {
-      print("❌ Erro ao carregar escalas extras disponíveis: $e");
+      //print("❌ Erro ao carregar escalas extras disponíveis: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erro ao carregar escalas extras disponíveis.")),
@@ -116,7 +116,7 @@ class _EscalaExtraScreenState extends State<EscalaExtraScreen> {
         }
       }
     } catch (e) {
-      print("❌ Erro ao carregar setores: $e");
+      //print("❌ Erro ao carregar setores: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erro ao carregar setores.")),
@@ -228,7 +228,7 @@ Future<void> _cancelarInscricaoExtra(String idInscricao) async {
         }
       }
     } catch (e) {
-      print("❌ Erro ao cancelar inscrição: $e");
+      //print("❌ Erro ao cancelar inscrição: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),

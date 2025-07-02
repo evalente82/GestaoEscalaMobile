@@ -17,7 +17,7 @@ class AuthService {
   static Future<Map<String, dynamic>> login(String usuario, String senha) async {
     try {
       final url = Uri.parse("$baseUrl/login/autenticar");
-      print("📡 Enviando requisição para: $url");
+      //print("📡 Enviando requisição para: $url");
 
       final response = await http.post(
         url,
@@ -25,8 +25,8 @@ class AuthService {
         body: jsonEncode({"usuario": usuario, "senha": senha}),
       );
 
-      print("🔹 Status Code: ${response.statusCode}");
-      print("🔹 Resposta: ${response.body}");
+      //print("🔹 Status Code: ${response.statusCode}");
+      //print("🔹 Resposta: ${response.body}");
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -51,7 +51,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print("❌ Erro durante a requisição: $e");
+      //print("❌ Erro durante a requisição: $e");
       return {"success": false, "message": "Erro de conexão com o servidor__LOGIN: $e"};
     }
   }
@@ -59,26 +59,26 @@ class AuthService {
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
-    print("💾 Token salvo no SharedPreferences: $token");
+    //print("💾 Token salvo no SharedPreferences: $token");
   }
 
   static Future<void> saveRefreshToken(String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('refresh_token', refreshToken);
-    print("💾 RefreshToken salvo no SharedPreferences: $refreshToken");
+    //print("💾 RefreshToken salvo no SharedPreferences: $refreshToken");
   }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    print("📖 Token recuperado do SharedPreferences: $token");
+    //print("📖 Token recuperado do SharedPreferences: $token");
     return token;
   }
 
   static Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
     final refreshToken = prefs.getString('refresh_token');
-    print("📖 RefreshToken recuperado do SharedPreferences: $refreshToken");
+    //print("📖 RefreshToken recuperado do SharedPreferences: $refreshToken");
     return refreshToken;
   }
 
@@ -86,14 +86,14 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
     await prefs.remove('refresh_token');
-    print("🗑️ Tokens limpos do SharedPreferences.");
+    //print("🗑️ Tokens limpos do SharedPreferences.");
   }
 
   static Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
     try {
       final url = Uri.parse("$baseUrl/login/refresh");
-      print("📡 Enviando requisição para: $url");
-      print("📤 Enviando refreshToken: $refreshToken");
+      //print("📡 Enviando requisição para: $url");
+      //print("📤 Enviando refreshToken: $refreshToken");
 
       final response = await http.post(
         url,
@@ -101,8 +101,8 @@ class AuthService {
         body: jsonEncode({"refreshToken": refreshToken}),
       );
 
-      print("🔹 Status Code: ${response.statusCode}");
-      print("🔹 Resposta: ${response.body}");
+      //print("🔹 Status Code: ${response.statusCode}");
+      //print("🔹 Resposta: ${response.body}");
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -120,7 +120,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print("❌ Erro ao renovar token: $e");
+      //print("❌ Erro ao renovar token: $e");
       return {"success": false, "message": "Erro ao renovar token: $e"};
     }
   }

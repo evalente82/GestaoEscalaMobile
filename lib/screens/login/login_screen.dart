@@ -38,14 +38,14 @@ class _LoginScreenState extends State<LoginScreen> {
         final String token = response["token"] as String;
         final String refreshToken = response["refreshToken"] as String? ?? "";
         
-        print("📥 Login bem-sucedido - Token recebido: $token");
-        print("📥 Login bem-sucedido - RefreshToken recebido: $refreshToken");
+        //print("📥 Login bem-sucedido - Token recebido: $token");
+        //print("📥 Login bem-sucedido - RefreshToken recebido: $refreshToken");
 
         await AuthService.saveToken(token);
         if (refreshToken.isNotEmpty) {
           await AuthService.saveRefreshToken(refreshToken);
         } else {
-          print("⚠️ RefreshToken está vazio ou não foi retornado pelo backend.");
+          //print("⚠️ RefreshToken está vazio ou não foi retornado pelo backend.");
         }
 
         final String nomeUsuario = response["nomeUsuario"] ?? "Desconhecido";
@@ -199,31 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Align(
-                  alignment: Alignment.center,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RedefinirSenhaScreen(token: "temp_token"),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      "Redefinir Senha (Temporário)",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              ),              
               const FooterComponent(),
             ],
           ),

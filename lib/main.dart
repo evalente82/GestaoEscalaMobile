@@ -32,7 +32,7 @@ import 'package:webview_flutter/webview_flutter.dart'; // Principal
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("📩 Notificação em background recebida: ${message.notification?.title}");
+  //print("📩 Notificação em background recebida: ${message.notification?.title}");
 
   await NotificationService.showNotification(
     message.notification?.title ?? "Nova Permuta",
@@ -43,7 +43,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final prefs = await SharedPreferences.getInstance();
   int currentCount = prefs.getInt('notificationCount') ?? 0;
   await prefs.setInt('notificationCount', currentCount + 1);
-  print(" Contador em background atualizado: ${currentCount + 1}");
+  //print(" Contador em background atualizado: ${currentCount + 1}");
 }
 
 void main() async {
@@ -111,7 +111,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("📩 Notificação em foreground recebida: ${message.notification?.title}");
+      //print("📩 Notificação em foreground recebida: ${message.notification?.title}");
       userModel.incrementNotificationCount();
       NotificationService.showNotification(
         message.notification?.title ?? "Nova Permuta",
@@ -121,19 +121,19 @@ class _MyAppState extends State<MyApp> {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("📩 App aberto por notificação: ${message.notification?.title}");
+      //print("📩 App aberto por notificação: ${message.notification?.title}");
       userModel.incrementNotificationCount();
       Navigator.pushNamed(context, '/permutas');
     });
 
     String? fcmToken = await messaging.getToken();
     if (fcmToken != null) {
-      print("🔑 FCM Token: $fcmToken");
+      //print("🔑 FCM Token: $fcmToken");
       await _sendFcmTokenToBackend(fcmToken);
     }
 
     messaging.onTokenRefresh.listen((newToken) {
-      print("🔑 FCM Token atualizado: $newToken");
+      //print("🔑 FCM Token atualizado: $newToken");
       _sendFcmTokenToBackend(newToken);
     });
   }
@@ -146,9 +146,9 @@ class _MyAppState extends State<MyApp> {
           "/login/updateFcmToken",
           {"idFuncionario": userModel.idFuncionario, "fcmToken": fcmToken},
         );
-        print("✅ FCM Token enviado: ${response["statusCode"]} - ${response["body"]}");
+        //print("✅ FCM Token enviado: ${response["statusCode"]} - ${response["body"]}");
       } catch (e) {
-        print("❌ Erro ao enviar FCM Token: $e");
+        //print("❌ Erro ao enviar FCM Token: $e");
       }
     }
   }

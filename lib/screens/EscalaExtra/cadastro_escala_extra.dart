@@ -30,12 +30,12 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint("[Flutter] initState: Inicializando...");
+    //debugPrint("[Flutter] initState: Inicializando...");
 
     if (kIsWeb) {
-      debugPrint("[Flutter] Ambiente Web: reCAPTCHA v3/Enterprise será gerenciado por JS Interop.");
+      //debugPrint("[Flutter] Ambiente Web: reCAPTCHA v3/Enterprise será gerenciado por JS Interop.");
     } else {
-      debugPrint("[Flutter] Ambiente Mobile: Não há reCAPTCHA configurado nesta tela.");
+      //debugPrint("[Flutter] Ambiente Mobile: Não há reCAPTCHA configurado nesta tela.");
     }
   }
 
@@ -48,22 +48,22 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
 
   // Método para obter o token do reCAPTCHA
   Future<void> _getRecaptchaToken() async {
-    debugPrint("[Flutter] _getRecaptchaToken: Iniciado.");
+    //debugPrint("[Flutter] _getRecaptchaToken: Iniciado.");
 
     if (kIsWeb) {
-      debugPrint("[Flutter Web] _getRecaptchaToken: Executando reCAPTCHA v3 via JS Interop.");
+      //debugPrint("[Flutter Web] _getRecaptchaToken: Executando reCAPTCHA v3 via JS Interop.");
 
       String? tempToken;
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext dialogContext) {
-          debugPrint("[Flutter Web] _getRecaptchaToken: AlertDialog para reCAPTCHA v3 (web) sendo construído.");
+          //debugPrint("[Flutter Web] _getRecaptchaToken: AlertDialog para reCAPTCHA v3 (web) sendo construído.");
           return PopScope(
             canPop: false,
             onPopInvoked: (bool didPop) {
               if (didPop) {
-                debugPrint("[Flutter Web] Tentativa de fechar o dialog do reCAPTCHA (web) foi impedida.");
+                //debugPrint("[Flutter Web] Tentativa de fechar o dialog do reCAPTCHA (web) foi impedida.");
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Aguarde a verificação de segurança.")),
                 );
@@ -78,25 +78,25 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
                   builder: (BuildContext innerBuilderContext) {
                     WidgetsBinding.instance.addPostFrameCallback((_) async {
                       if (innerBuilderContext.mounted) {
-                        debugPrint("[Flutter Web] PostFrameCallback: Expondo 'onRecaptchaV3VerifiedWeb' para JS.");
+                        //debugPrint("[Flutter Web] PostFrameCallback: Expondo 'onRecaptchaV3VerifiedWeb' para JS.");
                         js.context['onRecaptchaV3VerifiedWeb'] = (String token) {
-                          debugPrint("[Flutter Web] Callback 'onRecaptchaV3VerifiedWeb' acionada pelo JS com token: $token");
+                          //debugPrint("[Flutter Web] Callback 'onRecaptchaV3VerifiedWeb' acionada pelo JS com token: $token");
                           tempToken = token;
 
                           if (mounted && Navigator.canPop(dialogContext)) {
                             Navigator.pop(dialogContext);
                           } else {
-                            debugPrint("[Flutter Web] Widget não montado ou dialog não pode ser fechado no momento do callback.");
+                            //debugPrint("[Flutter Web] Widget não montado ou dialog não pode ser fechado no momento do callback.");
                           }
                         };
 
-                        debugPrint("[Flutter Web] Chamando JS: executeRecaptchaV3.");
+                        //debugPrint("[Flutter Web] Chamando JS: executeRecaptchaV3.");
                         js.context.callMethod(
                             'executeRecaptchaV3',
                             [_recaptchaSiteKey, 'solicitacao_escala_extra', 'onRecaptchaV3VerifiedWeb']
                         );
                       } else {
-                        debugPrint("[Flutter Web] innerBuilderContext não montado, não chamando JS executeRecaptchaV3.");
+                        //debugPrint("[Flutter Web] innerBuilderContext não montado, não chamando JS executeRecaptchaV3.");
                       }
                     });
                     return const Center(child: Column(
@@ -117,21 +117,21 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
       setState(() {
           _recaptchaToken = tempToken;
       });
-      debugPrint("[Flutter Web] _getRecaptchaToken: reCAPTCHA v3 concluído. Token: $_recaptchaToken");
+      //debugPrint("[Flutter Web] _getRecaptchaToken: reCAPTCHA v3 concluído. Token: $_recaptchaToken");
     } else {
-      debugPrint("[Flutter Mobile] _getRecaptchaToken: reCAPTCHA não implementado para mobile.");
+      //debugPrint("[Flutter Mobile] _getRecaptchaToken: reCAPTCHA não implementado para mobile.");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("A verificação de segurança não está disponível para mobile no momento.")),
         );
       }
     }
-    debugPrint("[Flutter] _getRecaptchaToken: Finalizado.");
+    //debugPrint("[Flutter] _getRecaptchaToken: Finalizado.");
   }
 
 
   void _cadastrarFuncionario() async {
-    debugPrint("[Flutter] _cadastrarFuncionario: Iniciado.");
+    //debugPrint("[Flutter] _cadastrarFuncionario: Iniciado.");
 
     // 1. Acessar o user model para obter os dados do usuário logado
   final userModel = Provider.of<UserModel>(context, listen: false);
@@ -146,7 +146,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
         ),
       );
     }
-    debugPrint("[Flutter] Falha na validação: Matrícula digitada (${_matriculaController.text}) não confere com a do usuário (${userModel.userMatricula}).");
+    //debugPrint("[Flutter] Falha na validação: Matrícula digitada (${_matriculaController.text}) não confere com a do usuário (${userModel.userMatricula}).");
     return; // Interrompe a execução aqui
   }
 
@@ -165,7 +165,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
         _recaptchaToken == 'error_api_not_loaded' || _recaptchaToken == 'error_container_not_found' ||
         _recaptchaToken == 'error_render_exception' || _recaptchaToken == 'error_execution_failed')
     {
-      debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA nulo/inválido, chamando _getRecaptchaToken.");
+      //debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA nulo/inválido, chamando _getRecaptchaToken.");
       _recaptchaToken = null;
       await _getRecaptchaToken();
 
@@ -174,7 +174,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
           _recaptchaToken == 'error_api_not_loaded' || _recaptchaToken == 'error_container_not_found' ||
           _recaptchaToken == 'error_render_exception' || _recaptchaToken == 'error_execution_failed')
       {
-        debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA ainda nulo/inválido após tentativa. Interrompendo cadastro.");
+        //debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA ainda nulo/inválido após tentativa. Interrompendo cadastro.");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Falha na verificação de segurança. Tente novamente.")),
@@ -192,7 +192,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
           const SnackBar(content: Text("Erro: ID do funcionário não disponível.")),
         );
       }
-      debugPrint("[Flutter] _cadastrarFuncionario: ID do funcionário não disponível.");
+      //debugPrint("[Flutter] _cadastrarFuncionario: ID do funcionário não disponível.");
       return;
     }
 
@@ -203,18 +203,18 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
       "matricula": _matriculaController.text, // Adiciona o valor da matrícula ao request
     };
 
-    debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA antes de enviar: $_recaptchaToken");
+    //debugPrint("[Flutter] _cadastrarFuncionario: Token reCAPTCHA antes de enviar: $_recaptchaToken");
 
     _recaptchaToken = null;
 
     try {
-      debugPrint("📡 Enviando solicitação de cadastro de RAS/Extra: $requestBody");
+      //debugPrint("📡 Enviando solicitação de cadastro de RAS/Extra: $requestBody");
       final response = await ApiClient.post(
         '/solicitacaoEscalaExtra/Incluir',
         requestBody,
       );
 
-      debugPrint("📡 Resposta do cadastro: Status ${response['statusCode']}, Body: ${response['body']}");
+      //debugPrint("📡 Resposta do cadastro: Status ${response['statusCode']}, Body: ${response['body']}");
 
       if (mounted) {
         if (response["statusCode"] == 200 || response["statusCode"] == 201) {
@@ -222,7 +222,7 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
             const SnackBar(content: Text("RAS / Extra Cadastrado com sucesso! Confira seu e-mail.")),
           );
           Navigator.pop(context);
-          debugPrint("[Flutter] Cadastro bem-sucedido.");
+          //debugPrint("[Flutter] Cadastro bem-sucedido.");
         } else {
           // ⭐ NOVIDADE AQUI: Extrai a mensagem da chave 'mensagem' do body
           String errorMessage = "Erro ao Cadastrar RAS / Extra.";
@@ -239,22 +239,22 @@ class _CadastroEscalaExtraScreenState extends State<CadastroEscalaExtraScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage)),
           );
-          debugPrint("[Flutter] Erro no cadastro (status != 200/201): $errorMessage");
+          //debugPrint("[Flutter] Erro no cadastro (status != 200/201): $errorMessage");
         }
       }
     } catch (e) {
-      debugPrint("❌ Erro ao cadastrar RAS / Extra na API: $e");
+      //debugPrint("❌ Erro ao cadastrar RAS / Extra na API: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("ERRO ao Cadastrar RAS / Extra. Verifique sua conexão.")),
         );
       }
     }
-    debugPrint("[Flutter] _cadastrarFuncionario: Finalizado.");
+    //debugPrint("[Flutter] _cadastrarFuncionario: Finalizado.");
   }
 
   void _cancelarCadastro() {
-    debugPrint("[Flutter] _cancelarCadastro: Voltando para tela anterior.");
+    //debugPrint("[Flutter] _cancelarCadastro: Voltando para tela anterior.");
     Navigator.pop(context);
   }
 
