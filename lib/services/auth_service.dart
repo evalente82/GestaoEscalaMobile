@@ -7,11 +7,11 @@ class AuthService {
   static String get baseUrl {
     if (kIsWeb) {
       //return "";
-      // return "http://localhost:8080";
-      return "https://back-gestao-escala.fly.dev";
+      return "http://localhost:8080";
+      // return "https://back-gestao-escala.fly.dev";
     }
-    return "https://back-gestao-escala.fly.dev";
-     // return "http://10.0.2.2:8080";
+    // return "https://back-gestao-escala.fly.dev";
+     return "http://10.0.2.2:8080";
   }
 
   static Future<Map<String, dynamic>> login(String usuario, String senha) async {
