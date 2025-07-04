@@ -3,9 +3,145 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:escala_mobile/models/user_model.dart';
 import 'package:logger/logger.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Importante para formatação de data
+import 'package:syncfusion_flutter_datagrid/datagrid.dart'; // Importação do DataGrid
 
 final logger = Logger();
+
+// Nova classe modelo para representar uma linha da tabela (um dia de escala)
+class DailyEscala {
+  final DateTime date; // A data completa para calcular dia-sem e fim de semana
+  final Map<String, List<String>> postoFuncionarios; // Mapa: { 'nomePosto': ['Func1', 'Func2'] }
+
+  DailyEscala({
+    required this.date,
+    required this.postoFuncionarios,
+  });
+}
+
+// Classe customizada para ser a fonte de dados do SfDataGrid
+class EscalaDataSource extends DataGridSource {
+  List<DailyEscala> _dailyEscalas;
+  List<String> _postosFiltrados;
+  Map<DateTime, Map<String, List<String>>> _agrupamentoOriginal;
+
+  EscalaDataSource({
+    required List<DailyEscala> dailyEscalas,
+    required List<String> postosFiltrados,
+    required Map<DateTime, Map<String, List<String>>> agrupamentoOriginal,
+  })  : _dailyEscalas = dailyEscalas,
+        _postosFiltrados = postosFiltrados,
+        _agrupamentoOriginal = agrupamentoOriginal {
+    _buildDataGridRows();
+  }
+
+  List<DataGridRow> _dataGridRows = [];
+
+  void _buildDataGridRows() {
+    _dataGridRows = _dailyEscalas.map<DataGridRow>((e) {
+      return DataGridRow(cells: [
+        DataGridCell<DateTime>( // Mudei para DateTime aqui para usar a data real
+          columnName: 'dia_sem',
+          value: e.date, // Passa o objeto DateTime completo
+        ),
+        // Células dinâmicas para os postos
+        ..._postosFiltrados.map((postoName) {
+          final List<String> funcionarios = e.postoFuncionarios[postoName] ?? ["-"];
+          return DataGridCell<List<String>>(
+            columnName: postoName,
+            value: funcionarios,
+          );
+        }).toList(),
+      ]);
+    }).toList();
+  }
+
+  @override
+  List<DataGridRow> get rows => _dataGridRows;
+
+  @override
+  DataGridRowAdapter? buildRow(DataGridRow row) {
+    final DateTime rowDate = row.getCells()[0].value as DateTime; // Pega a data real da célula Dia-Sem
+    final isWeekend = rowDate.weekday == DateTime.saturday || rowDate.weekday == DateTime.sunday;
+
+    return DataGridRowAdapter(
+      color: isWeekend ? Colors.grey.withOpacity(0.2) : null, // Aplica cor da linha
+      cells: row.getCells().map<Widget>((dataGridCell) {
+        // Se for a coluna Dia-Sem
+        if (dataGridCell.columnName == 'dia_sem') {
+          // Formata o DateTime para a exibição "DD-EEE"
+          final String displayValue = "${DateFormat("dd").format(dataGridCell.value as DateTime)}-${DateFormat("EEE", "pt_BR").format(dataGridCell.value as DateTime).toUpperCase()}";
+          return Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: Colors.grey[300]!)), // Borda direita
+            ),
+            child: Text(
+              displayValue,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,
+            ),
+          );
+        }
+        // Se for uma coluna de posto (funcionários)
+        else {
+          final List<String> funcionarios = dataGridCell.value as List<String>;
+          return Container(
+            alignment: Alignment.topLeft, // Alinha ao topo esquerdo
+            padding: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: Colors.grey[300]!)), // Borda direita
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: funcionarios.map((func) => Text(
+                func,
+                style: const TextStyle(fontSize: 12),
+                softWrap: true,
+                overflow: TextOverflow.visible, // Permite que o texto se torne visível se a linha for grande o suficiente
+              )).toList(),
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  // Método para calcular a altura da linha baseado no conteúdo
+  // Chamado pelo SfDataGrid via onQueryRowHeight
+  double calculateMaxCellHeight(DateTime dia) { // Este método deve estar aqui
+    double maxHeight = 60.0; // Altura mínima padrão para uma linha
+
+    final Map<String, List<String>>? postosDoDia = _agrupamentoOriginal[dia];
+    if (postosDoDia != null) {
+      for (var posto in _postosFiltrados) {
+        final List<String> funcionarios = postosDoDia[posto] ?? ["-"];
+        // Estimativa: cada linha de texto ocupa ~16px (fontsize 12 + line spacing).
+        // Adicione 16px de padding vertical (8px top + 8px bottom).
+        final double estimatedHeight = (funcionarios.length * 16.0) + 16.0;
+        if (estimatedHeight > maxHeight) {
+          maxHeight = estimatedHeight;
+        }
+      }
+    }
+    return maxHeight;
+  }
+
+  // Método para atualizar os dados, chamará _buildDataGridRows novamente
+  void updateDataGridSource({
+    required List<DailyEscala> newDailyEscalas,
+    required List<String> newPostosFiltrados,
+    required Map<DateTime, Map<String, List<String>>> newAgrupamentoOriginal,
+  }) {
+    _dailyEscalas = newDailyEscalas;
+    _postosFiltrados = newPostosFiltrados;
+    _agrupamentoOriginal = newAgrupamentoOriginal;
+    _buildDataGridRows();
+    notifyListeners(); // Notifica o DataGrid para reconstruir
+  }
+}
 
 class EscalaScreen extends StatefulWidget {
   const EscalaScreen({super.key});
@@ -22,12 +158,32 @@ class _EscalaScreenState extends State<EscalaScreen> {
   List<Map<String, dynamic>> _escalaPronta = [];
   Map<String, String> _funcionarios = {};
 
+  // Instância do DataGridSource
+  late EscalaDataSource _escalaDataSource;
+
   @override
   void initState() {
     super.initState();
+    // Inicializa o dataSource vazio no initState
+    _escalaDataSource = EscalaDataSource(
+      dailyEscalas: [],
+      postosFiltrados: [],
+      agrupamentoOriginal: {}, // Inicializa vazio
+    );
+
     _carregarEscalasUsuarioLogado();
     _carregarPostos();
     _carregarFuncionarios();
+
+    // REMOVA TODOS OS LISTENERS DE SCROLL CONTROLLERS AQUI.
+    // O SfDataGrid lida com a rolagem internamente.
+  }
+
+  @override
+  void dispose() {
+    // REMOVA TODOS OS DISPOSE DE SCROLL CONTROLLERS AQUI.
+    // O SfDataGrid gerencia isso.
+    super.dispose();
   }
 
   Future<void> _carregarEscalasUsuarioLogado() async {
@@ -140,9 +296,26 @@ class _EscalaScreenState extends State<EscalaScreen> {
         Set<String> idsPostosNaEscala = escalaFiltrada.map((e) => e["idPostoTrabalho"].toString()).toSet();
         List<String> postosFiltrados = idsPostosNaEscala.map((id) => _postos[id] ?? "Posto Desconhecido").toList();
 
+        // Agrupar os dados e preparar para o DataGrid
+        final Map<DateTime, Map<String, List<String>>> groupedData = _agruparEscala();
+        final List<DailyEscala> newDailyEscalas = [];
+        final sortedDays = groupedData.keys.toList()..sort((a, b) => a.compareTo(b));
+        for (var day in sortedDays) {
+          newDailyEscalas.add(DailyEscala(
+            date: day,
+            postoFuncionarios: groupedData[day]!,
+          ));
+        }
+
         setState(() {
           _escalaPronta = escalaFiltrada;
           _postosFiltrados = postosFiltrados;
+          // Atualiza o dataSource do DataGrid com os novos dados
+          _escalaDataSource.updateDataGridSource(
+            newDailyEscalas: newDailyEscalas,
+            newPostosFiltrados: postosFiltrados,
+            newAgrupamentoOriginal: groupedData,
+          );
         });
         logger.i("✅ Postos filtrados para escala $idEscala: ${_postosFiltrados.length}");
       } else {
@@ -158,26 +331,28 @@ class _EscalaScreenState extends State<EscalaScreen> {
     }
   }
 
-  Map<String, Map<String, List<String>>> _agruparEscala() {
-    Map<String, Map<String, List<String>>> escalaAgrupada = {};
+  Map<DateTime, Map<String, List<String>>> _agruparEscala() {
+    Map<DateTime, Map<String, List<String>>> escalaAgrupada = {};
 
     for (var item in _escalaPronta) {
-      String diaCompleto = item["dtDataServico"];
-      String diaFormatado = DateFormat("MM-dd").format(DateTime.parse(diaCompleto));
+      DateTime dataServico = DateTime.parse(item["dtDataServico"]);
+      // Normaliza para o início do dia para agrupar corretamente
+      DateTime diaNormalizado = DateTime(dataServico.year, dataServico.month, dataServico.day);
+
       String posto = _postos[item["idPostoTrabalho"]] ?? "Posto Desconhecido";
       String funcionario = item["idFuncionario"] == "00000000-0000-0000-0000-000000000000"
           ? "Sem Funcionário"
           : _funcionarios[item["idFuncionario"]] ?? "Funcionário Desconhecido";
 
-      if (!escalaAgrupada.containsKey(diaFormatado)) {
-        escalaAgrupada[diaFormatado] = {};
+      if (!escalaAgrupada.containsKey(diaNormalizado)) {
+        escalaAgrupada[diaNormalizado] = {};
       }
 
-      if (!escalaAgrupada[diaFormatado]!.containsKey(posto)) {
-        escalaAgrupada[diaFormatado]![posto] = [];
+      if (!escalaAgrupada[diaNormalizado]!.containsKey(posto)) {
+        escalaAgrupada[diaNormalizado]![posto] = [];
       }
 
-      escalaAgrupada[diaFormatado]![posto]!.add(funcionario);
+      escalaAgrupada[diaNormalizado]![posto]!.add(funcionario);
     }
 
     return escalaAgrupada;
@@ -185,8 +360,6 @@ class _EscalaScreenState extends State<EscalaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Map<String, Map<String, List<String>>> escalaAgrupada = _agruparEscala();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Escala", style: TextStyle(color: Colors.white)),
@@ -242,68 +415,55 @@ class _EscalaScreenState extends State<EscalaScreen> {
                   border: Border.all(color: Colors.grey[300]!),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: RawScrollbar(
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  child: SingleChildScrollView(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Coluna fixa de dias
-                          DataTable(
-                            headingRowHeight: 40,
-                            dataRowHeight: 60,
-                            columnSpacing: 20,
-                            headingTextStyle: const TextStyle(fontWeight: FontWeight.bold),
-                            columns: [const DataColumn(label: Text("Dia"))],
-                            rows: escalaAgrupada.keys.map((dia) => DataRow(
-                              cells: [DataCell(Text(dia))],
-                            )).toList(),
-                          ),
-                          // Colunas dos postos
-                          DataTable(
-                            headingRowHeight: 40,
-                            dataRowHeight: 60,
-                            columnSpacing: 20,
-                            headingTextStyle: const TextStyle(fontWeight: FontWeight.bold),
-                            columns: _postosFiltrados.isNotEmpty
-                              ? _postosFiltrados.map((posto) => DataColumn(
-                                  label: Container(
-                                    constraints: const BoxConstraints(maxWidth: 150),
-                                    child: Text(
-                                      posto,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )).toList()
-                              : [],
-                            rows: escalaAgrupada.keys.map((dia) => DataRow(
-                              cells: _postosFiltrados.map((posto) {
-                                List<String> funcionarios = escalaAgrupada[dia]?[posto] ?? ["-"];
-                                return DataCell(
-                                  Container(
-                                    constraints: const BoxConstraints(maxWidth: 150),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: funcionarios.map((func) => Text(
-                                        func,
-                                        style: const TextStyle(fontSize: 12),
-                                        overflow: TextOverflow.ellipsis,
-                                      )).toList(),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            )).toList(),
-                          ),
-                        ],
+                child: SfDataGrid(
+                  source: _escalaDataSource,
+                  frozenColumnsCount: 1, // Fixa a primeira coluna ("Dia-Sem")
+                  // frozenRowsCount: 1, // Fixa o cabeçalho. Já é padrão.
+                  headerRowHeight: 40,
+                  rowHeight: 60, // Altura padrão que será ajustada por onQueryRowHeight
+                  gridLinesVisibility: GridLinesVisibility.both,
+                  headerGridLinesVisibility: GridLinesVisibility.both,
+                  selectionMode: SelectionMode.none, // Ou o que você precisar
+                  allowColumnsResizing: true, // Opcional: permite redimensionar colunas
+                  columnWidthMode: ColumnWidthMode.fill, // Distribui as colunas igualmente
+                  
+                  // Callback para altura de linha dinâmica
+                  onQueryRowHeight: (details) {
+                    // Obtém o objeto DailyEscala da linha atual
+                    // Acessamos _dailyEscalas da fonte de dados usando o rowIndex.
+                    final DailyEscala dailyEscala = _escalaDataSource._dailyEscalas[details.rowIndex];
+                    // Chama o método calculateMaxCellHeight da instância do DataGridSource
+                    return _escalaDataSource.calculateMaxCellHeight(dailyEscala.date);
+                  },
+
+                  columns: <GridColumn>[
+                    GridColumn(
+                      columnName: 'dia_sem',
+                      width: 80, // Largura fixa da coluna "Dia-Sem"
+                      label: Container(
+                        padding: const EdgeInsets.all(8.0),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Dia-Sem',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
+                    // Mapeia os postos filtrados para colunas dinamicamente
+                    ..._postosFiltrados.map((posto) => GridColumn(
+                      columnName: posto, // Nome da coluna como o nome do posto
+                      width: 150, // Largura padrão para as colunas de postos
+                      label: Container(
+                        padding: const EdgeInsets.all(8.0),
+                        alignment: Alignment.center,
+                        child: Text(
+                          posto,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis, // Para o cabeçalho
+                        ),
+                      ),
+                    )).toList(),
+                  ],
                 ),
               ),
             ),

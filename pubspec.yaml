@@ -35,6 +35,8 @@ dependencies:
   webview_flutter_wkwebview: ^3.12.0
   webview_flutter_web: ^0.2.3+4
   js: ^0.7.1
+  syncfusion_flutter_datagrid: ^30.1.38
+  syncfusion_flutter_core: ^30.1.38
 
 dev_dependencies:
   flutter_test:
