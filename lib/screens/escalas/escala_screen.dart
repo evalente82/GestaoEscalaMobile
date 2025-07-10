@@ -150,7 +150,10 @@ class EscalaScreen extends StatefulWidget {
   State<EscalaScreen> createState() => _EscalaScreenState();
 }
 
+
+
 class _EscalaScreenState extends State<EscalaScreen> {
+  // _idEscalaSelecionada agora irá guardar uma chave composta (ex: "id-da-escala|2025-07")
   String? _idEscalaSelecionada;
   List<Map<String, dynamic>> _escalas = [];
   Map<String, String> _postos = {};
@@ -158,34 +161,27 @@ class _EscalaScreenState extends State<EscalaScreen> {
   List<Map<String, dynamic>> _escalaPronta = [];
   Map<String, String> _funcionarios = {};
 
-  // Instância do DataGridSource
   late EscalaDataSource _escalaDataSource;
 
   @override
   void initState() {
     super.initState();
-    // Inicializa o dataSource vazio no initState
     _escalaDataSource = EscalaDataSource(
       dailyEscalas: [],
       postosFiltrados: [],
-      agrupamentoOriginal: {}, // Inicializa vazio
+      agrupamentoOriginal: {},
     );
-
     _carregarEscalasUsuarioLogado();
     _carregarPostos();
     _carregarFuncionarios();
-
-    // REMOVA TODOS OS LISTENERS DE SCROLL CONTROLLERS AQUI.
-    // O SfDataGrid lida com a rolagem internamente.
   }
 
   @override
   void dispose() {
-    // REMOVA TODOS OS DISPOSE DE SCROLL CONTROLLERS AQUI.
-    // O SfDataGrid gerencia isso.
     super.dispose();
   }
 
+  // --- AJUSTE 1: Criando um valor único para cada item do dropdown ---
   Future<void> _carregarEscalasUsuarioLogado() async {
     try {
       final userModel = Provider.of<UserModel>(context, listen: false);
@@ -197,20 +193,31 @@ class _EscalaScreenState extends State<EscalaScreen> {
 
       if (response["statusCode"] == 200) {
         final List<dynamic> data = response["body"];
-        Set<String> escalasUnicas = {};
-        final List<Map<String, dynamic>> escalas = data
-            .map((e) {
-              String escalaNome = "${e["nmNomeEscala"]} - ${DateFormat("MMMM", "pt_BR").format(DateTime.parse(e["dtDataServico"]))}";
-              if (escalasUnicas.contains(escalaNome)) return null;
-              escalasUnicas.add(escalaNome);
-              return {
-                "id": e["idEscala"]?.toString() ?? "",
-                "nome": escalaNome,
-              };
-            })
-            .where((element) => element != null)
-            .cast<Map<String, dynamic>>()
-            .toList();
+
+        // Usamos um Map para garantir que cada "Nome - Mês" apareça apenas uma vez.
+        final Map<String, Map<String, dynamic>> escalasUnicas = {};
+
+        for (var e in data) {
+          final date = DateTime.parse(e["dtDataServico"]);
+          // O nome de exibição continua o mesmo que você criou.
+          final String nomeExibicao = "${e["nmNomeEscala"]} - ${DateFormat("MMMM", "pt_BR").format(date)}";
+
+          // Adicionamos apenas se ainda não existir, para manter a unicidade.
+          if (!escalasUnicas.containsKey(nomeExibicao)) {
+            // AQUI ESTÁ A MUDANÇA PRINCIPAL:
+            // O valor ("id") agora é uma chave composta com ID da escala e o mês/ano.
+            // Usamos '|' como separador por ser seguro e não conflitar com UUIDs.
+            final String chaveComposta = "${e["idEscala"]}|${DateFormat("yyyy-MM").format(date)}";
+
+            escalasUnicas[nomeExibicao] = {
+              "id": chaveComposta, // O valor a ser passado é a chave composta
+              "nome": nomeExibicao, // O texto a ser exibido
+            };
+          }
+        }
+        
+        // A lista final para o dropdown é criada a partir dos valores do Map.
+        final List<Map<String, dynamic>> escalas = escalasUnicas.values.toList();
 
         setState(() {
           _escalas = escalas;
@@ -229,11 +236,11 @@ class _EscalaScreenState extends State<EscalaScreen> {
     }
   }
 
+  // As funções _carregarPostos e _carregarFuncionarios permanecem idênticas.
   Future<void> _carregarPostos() async {
     try {
       final String url = "/PostoTrabalho/buscarTodos";
       final response = await ApiClient.get(url);
-
       if (response["statusCode"] == 200) {
         final List<dynamic> data = response["body"];
         setState(() {
@@ -246,9 +253,7 @@ class _EscalaScreenState extends State<EscalaScreen> {
     } catch (e) {
       logger.e("Erro ao carregar postos: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao carregar postos: $e")),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao carregar postos: $e")));
       }
     }
   }
@@ -257,7 +262,6 @@ class _EscalaScreenState extends State<EscalaScreen> {
     try {
       final String url = "/Funcionario/buscarTodos";
       final response = await ApiClient.get(url);
-
       if (response["statusCode"] == 200) {
         final List<dynamic> data = response["body"];
         setState(() {
@@ -270,22 +274,41 @@ class _EscalaScreenState extends State<EscalaScreen> {
     } catch (e) {
       logger.e("Erro ao carregar funcionários: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao carregar funcionários: $e")),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao carregar funcionários: $e")));
       }
     }
   }
 
-  Future<void> _filtrarPostosPorEscala(String idEscala) async {
+  // --- AJUSTE 2: Lendo a chave composta e filtrando os dados corretos ---
+  Future<void> _filtrarPostosPorEscala(String chaveComposta) async {
     try {
+      // 1. Interpreta a chave composta para obter o ID e o mês/ano
+      final parts = chaveComposta.split('|');
+      if (parts.length != 2) {
+        throw FormatException("Chave da escala em formato inválido: $chaveComposta");
+      }
+      final idEscala = parts[0];
+      final anoMesFiltro = DateFormat("yyyy-MM").parse(parts[1]);
+
+      // 2. Busca na API todos os dados daquele idEscala (como antes)
       final String url = "/escalaPronta/buscarPorId/$idEscala";
       final response = await ApiClient.get(url);
 
       if (response["statusCode"] == 200) {
-        final List<dynamic> data = response["body"];
+        final List<dynamic> dadosCompletos = response["body"];
 
-        List<Map<String, dynamic>> escalaFiltrada = data.map((e) {
+        // 3. PASSO CRÍTICO: Filtra os dados recebidos para manter apenas os do mês selecionado
+        final List<dynamic> dadosDoMes = dadosCompletos.where((e) {
+          try {
+            final dataServico = DateTime.parse(e["dtDataServico"]);
+            return dataServico.year == anoMesFiltro.year && dataServico.month == anoMesFiltro.month;
+          } catch (_) {
+            return false; // Ignora registros com data inválida
+          }
+        }).toList();
+
+        // A partir daqui, o código continua igual, mas usando "dadosDoMes"
+        List<Map<String, dynamic>> escalaFiltrada = dadosDoMes.map((e) {
           return {
             "dtDataServico": e["dtDataServico"] ?? "",
             "idPostoTrabalho": e["idPostoTrabalho"]?.toString() ?? "",
@@ -295,9 +318,10 @@ class _EscalaScreenState extends State<EscalaScreen> {
 
         Set<String> idsPostosNaEscala = escalaFiltrada.map((e) => e["idPostoTrabalho"].toString()).toSet();
         List<String> postosFiltrados = idsPostosNaEscala.map((id) => _postos[id] ?? "Posto Desconhecido").toList();
+        //postosFiltrados.sort();
 
-        // Agrupar os dados e preparar para o DataGrid
-        final Map<DateTime, Map<String, List<String>>> groupedData = _agruparEscala();
+        // Para evitar erros de estado, passamos a lista filtrada como parâmetro
+        final Map<DateTime, Map<String, List<String>>> groupedData = _agruparEscala(escalaFiltrada);
         final List<DailyEscala> newDailyEscalas = [];
         final sortedDays = groupedData.keys.toList()..sort((a, b) => a.compareTo(b));
         for (var day in sortedDays) {
@@ -308,16 +332,15 @@ class _EscalaScreenState extends State<EscalaScreen> {
         }
 
         setState(() {
-          _escalaPronta = escalaFiltrada;
+          _escalaPronta = escalaFiltrada; // Atualiza o estado geral
           _postosFiltrados = postosFiltrados;
-          // Atualiza o dataSource do DataGrid com os novos dados
           _escalaDataSource.updateDataGridSource(
             newDailyEscalas: newDailyEscalas,
             newPostosFiltrados: postosFiltrados,
             newAgrupamentoOriginal: groupedData,
           );
         });
-        logger.i("✅ Postos filtrados para escala $idEscala: ${_postosFiltrados.length}");
+        logger.i("✅ Postos filtrados para escala $idEscala (Mês: ${parts[1]}): ${_postosFiltrados.length}");
       } else {
         throw Exception("Erro ao carregar postos da escala. Código: ${response["statusCode"]}");
       }
@@ -331,12 +354,13 @@ class _EscalaScreenState extends State<EscalaScreen> {
     }
   }
 
-  Map<DateTime, Map<String, List<String>>> _agruparEscala() {
+  // --- AJUSTE 3: Pequena melhoria para tornar a função mais robusta ---
+  Map<DateTime, Map<String, List<String>>> _agruparEscala(List<Map<String, dynamic>> escalaParaAgrupar) {
     Map<DateTime, Map<String, List<String>>> escalaAgrupada = {};
 
-    for (var item in _escalaPronta) {
+    // A função agora usa a lista que recebeu como parâmetro, não a do estado.
+    for (var item in escalaParaAgrupar) {
       DateTime dataServico = DateTime.parse(item["dtDataServico"]);
-      // Normaliza para o início do dia para agrupar corretamente
       DateTime diaNormalizado = DateTime(dataServico.year, dataServico.month, dataServico.day);
 
       String posto = _postos[item["idPostoTrabalho"]] ?? "Posto Desconhecido";
@@ -383,7 +407,7 @@ class _EscalaScreenState extends State<EscalaScreen> {
                 value: _idEscalaSelecionada,
                 items: _escalas.map((escala) {
                   return DropdownMenuItem<String>(
-                    value: escala["id"],
+                    value: escala["id"], // O valor agora é a chave composta
                     child: Text(
                       escala["nome"],
                       overflow: TextOverflow.ellipsis,
@@ -395,6 +419,7 @@ class _EscalaScreenState extends State<EscalaScreen> {
                   if (value != null) {
                     setState(() {
                       _idEscalaSelecionada = value;
+                      // A função é a mesma, mas o valor que ela recebe é muito mais útil
                       _filtrarPostosPorEscala(value);
                     });
                   }
@@ -410,36 +435,35 @@ class _EscalaScreenState extends State<EscalaScreen> {
           if (_escalaPronta.isNotEmpty) ...[
             Expanded(
               child: Container(
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.fromLTRB(16,0,16,16),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[300]!),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SfDataGrid(
                   source: _escalaDataSource,
-                  frozenColumnsCount: 1, // Fixa a primeira coluna ("Dia-Sem")
-                  // frozenRowsCount: 1, // Fixa o cabeçalho. Já é padrão.
+                  frozenColumnsCount: 1,
                   headerRowHeight: 40,
-                  rowHeight: 60, // Altura padrão que será ajustada por onQueryRowHeight
+                  rowHeight: 60,
                   gridLinesVisibility: GridLinesVisibility.both,
                   headerGridLinesVisibility: GridLinesVisibility.both,
-                  selectionMode: SelectionMode.none, // Ou o que você precisar
-                  allowColumnsResizing: true, // Opcional: permite redimensionar colunas
-                  columnWidthMode: ColumnWidthMode.fill, // Distribui as colunas igualmente
+                  selectionMode: SelectionMode.none,
+                  allowColumnsResizing: true,
+                  columnWidthMode: ColumnWidthMode.fill,
                   
-                  // Callback para altura de linha dinâmica
                   onQueryRowHeight: (details) {
-                    // Obtém o objeto DailyEscala da linha atual
-                    // Acessamos _dailyEscalas da fonte de dados usando o rowIndex.
+                    // --- AJUSTE 4: Adicionando segurança contra o RangeError ---
+                    if (details.rowIndex < 0 || details.rowIndex >= _escalaDataSource.rows.length) {
+                      return details.rowHeight; // Retorna altura padrão se o índice for inválido
+                    }
                     final DailyEscala dailyEscala = _escalaDataSource._dailyEscalas[details.rowIndex];
-                    // Chama o método calculateMaxCellHeight da instância do DataGridSource
                     return _escalaDataSource.calculateMaxCellHeight(dailyEscala.date);
                   },
 
                   columns: <GridColumn>[
                     GridColumn(
                       columnName: 'dia_sem',
-                      width: 80, // Largura fixa da coluna "Dia-Sem"
+                      width: 80,
                       label: Container(
                         padding: const EdgeInsets.all(8.0),
                         alignment: Alignment.center,
@@ -449,20 +473,19 @@ class _EscalaScreenState extends State<EscalaScreen> {
                         ),
                       ),
                     ),
-                    // Mapeia os postos filtrados para colunas dinamicamente
                     ..._postosFiltrados.map((posto) => GridColumn(
-                      columnName: posto, // Nome da coluna como o nome do posto
-                      width: 150, // Largura padrão para as colunas de postos
-                      label: Container(
-                        padding: const EdgeInsets.all(8.0),
-                        alignment: Alignment.center,
-                        child: Text(
-                          posto,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis, // Para o cabeçalho
-                        ),
-                      ),
-                    )).toList(),
+                          columnName: posto,
+                          width: 150,
+                          label: Container(
+                            padding: const EdgeInsets.all(8.0),
+                            alignment: Alignment.center,
+                            child: Text(
+                              posto,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )).toList(),
                   ],
                 ),
               ),
